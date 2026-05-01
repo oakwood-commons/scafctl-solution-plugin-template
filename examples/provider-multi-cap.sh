@@ -2,7 +2,7 @@
 # Creates a provider plugin with all four capabilities.
 set -euo pipefail
 
-scafctl run solution -f solution.yaml \
+scafctl run solution -f scafctl/solution.yaml \
   -r name=scafctl-plugin-allcaps \
   -r module=github.com/myorg/scafctl-plugin-allcaps \
   -r description="Provider with from, transform, action, and validation capabilities" \

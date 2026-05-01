@@ -48,7 +48,7 @@ scafctl run ghcr.io/oakwood-commons/solutions/plugin-template `
 git clone https://github.com/oakwood-commons/scafctl-solution-plugin-template.git
 cd scafctl-solution-plugin-template
 
-scafctl run solution -f solution.yaml \
+scafctl run solution -f scafctl/solution.yaml \
   -r name=scafctl-plugin-myecho \
   -r module=github.com/myorg/scafctl-plugin-myecho \
   -r description="Echoes input values" \
@@ -62,7 +62,7 @@ scafctl run solution -f solution.yaml \
 git clone https://github.com/oakwood-commons/scafctl-solution-plugin-template.git
 cd scafctl-solution-plugin-template
 
-scafctl run solution -f solution.yaml `
+scafctl run solution -f scafctl/solution.yaml `
     -r name=scafctl-plugin-myecho `
     -r module=github.com/myorg/scafctl-plugin-myecho `
     -r 'description=Echoes input values' `
@@ -75,7 +75,7 @@ scafctl run solution -f solution.yaml `
 **Bash:**
 
 ```bash
-scafctl run solution -f solution.yaml \
+scafctl run solution -f scafctl/solution.yaml \
   -r name=scafctl-plugin-myecho \
   -r module=github.com/myorg/scafctl-plugin-myecho \
   -r description="Echoes input values" \
@@ -88,7 +88,7 @@ scafctl run solution -f solution.yaml \
 **PowerShell:**
 
 ```powershell
-scafctl run solution -f solution.yaml `
+scafctl run solution -f scafctl/solution.yaml `
     -r name=scafctl-plugin-myecho `
     -r module=github.com/myorg/scafctl-plugin-myecho `
     -r 'description=Echoes input values' `

@@ -95,7 +95,7 @@ func (p *Plugin) GetToken(_ context.Context, handlerName string, _ sdkplugin.Tok
 	}
 
 	// TODO: implement token retrieval/refresh logic here
-	return nil, auth.ErrNotAuthenticated
+	return nil, fmt.Errorf("not authenticated")
 }
 
 // ListCachedTokens returns information about cached tokens.

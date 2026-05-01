@@ -19,7 +19,7 @@ try {
     Write-Host "  Output dir: $OutputDir"
 
     $args = @(
-        'run', 'solution', '-f', 'solution.yaml',
+        'run', 'solution', '-f', 'scafctl/solution.yaml',
         '-r', "name=$Name",
         '-r', "module=$Module",
         '-r', "description=Validation test $PluginType plugin",
@@ -71,7 +71,7 @@ try {
         $AuthName = 'scafctl-plugin-validate-auth'
         $AuthModule = "github.com/test/$AuthName"
 
-        & scafctl run solution -f solution.yaml `
+        & scafctl run solution -f scafctl/solution.yaml `
             -r "name=$AuthName" `
             -r "module=$AuthModule" `
             -r 'description=Validation test auth-handler plugin' `

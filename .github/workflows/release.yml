@@ -24,8 +24,8 @@ jobs:
       - name: Install scafctl
         run: |
           LATEST=$(curl -s https://api.github.com/repos/oakwood-commons/scafctl/releases/latest | jq -r .tag_name)
-          curl -sSL "https://github.com/oakwood-commons/scafctl/releases/download/${LATEST}/scafctl_${LATEST#v}_linux_amd64.tar.gz" | tar xz
-          sudo mv scafctl /usr/local/bin/
+          curl -sSL "https://github.com/oakwood-commons/scafctl/releases/download/${LATEST}/scafctl_${LATEST#v}_Linux_x86_64.tar.gz" | tar xz -C /tmp
+          sudo mv /tmp/scafctl /usr/local/bin/
           scafctl version
 
       - name: Run CI pipeline
@@ -43,8 +43,8 @@ jobs:
       - name: Install scafctl
         run: |
           LATEST=$(curl -s https://api.github.com/repos/oakwood-commons/scafctl/releases/latest | jq -r .tag_name)
-          curl -sSL "https://github.com/oakwood-commons/scafctl/releases/download/${LATEST}/scafctl_${LATEST#v}_linux_amd64.tar.gz" | tar xz
-          sudo mv scafctl /usr/local/bin/
+          curl -sSL "https://github.com/oakwood-commons/scafctl/releases/download/${LATEST}/scafctl_${LATEST#v}_Linux_x86_64.tar.gz" | tar xz -C /tmp
+          sudo mv /tmp/scafctl /usr/local/bin/
           scafctl version
 
       - name: Install cosign
