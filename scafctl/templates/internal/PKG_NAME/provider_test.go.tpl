@@ -63,7 +63,9 @@ func TestExecuteProvider(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, out.Data["result"])
+			data, ok := out.Data.(map[string]any)
+			require.True(t, ok, "expected Data to be map[string]any")
+			assert.Equal(t, tt.want, data["result"])
 		})
 	}
 }

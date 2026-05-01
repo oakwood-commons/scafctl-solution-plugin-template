@@ -30,7 +30,7 @@ task publish VERSION=1.0.0   # Push to OCI registry
 
 ## Solution Structure
 
-- `solution.yaml` -- Resolvers, workflow actions, and inline test cases
-- `templates/**/*.tpl` -- Go templates rendered with user inputs
+- `scafctl/solution.yaml` -- Resolvers, workflow actions, and inline test cases
+- `scafctl/templates/**/*.tpl` -- Go templates rendered with user inputs
 - `scripts/validate-output.sh` -- Renders and compiles generated output
 - `scripts/configure-repo.sh` -- Configures GitHub repo settings via gh CLI

@@ -7,7 +7,14 @@ set -euo pipefail
 PLUGIN_TYPE="${VALIDATE_PLUGIN_TYPE:-provider}"
 
 OUTPUT_DIR=$(mktemp -d)
-trap 'rm -rf "$OUTPUT_DIR"' EXIT
+AUTH_DIR=""
+cleanup() {
+  rm -rf "$OUTPUT_DIR"
+  if [ -n "$AUTH_DIR" ]; then
+    rm -rf "$AUTH_DIR"
+  fi
+}
+trap cleanup EXIT
 
 NAME="scafctl-plugin-validate-${PLUGIN_TYPE}"
 MODULE="github.com/test/${NAME}"
@@ -28,7 +35,7 @@ if [ "$PLUGIN_TYPE" = "provider" ]; then
   ARGS+=(-r "capabilities=from,transform")
 fi
 
-scafctl run solution -f solution.yaml "${ARGS[@]}" --output-dir "$OUTPUT_DIR"
+scafctl run solution -f scafctl/solution.yaml "${ARGS[@]}" --output-dir "$OUTPUT_DIR"
 
 cd "$OUTPUT_DIR/${NAME}"
 
@@ -54,12 +61,11 @@ if [ -z "${VALIDATE_PLUGIN_TYPE:-}" ]; then
   echo "=== Validating auth-handler plugin output ==="
 
   AUTH_DIR=$(mktemp -d)
-  trap 'rm -rf "$AUTH_DIR"' EXIT
 
   AUTH_NAME="scafctl-plugin-validate-auth"
   AUTH_MODULE="github.com/test/${AUTH_NAME}"
 
-  scafctl run solution -f "${OLDPWD}/solution.yaml" \
+  scafctl run solution -f "${OLDPWD}/scafctl/solution.yaml" \
     -r "name=${AUTH_NAME}" \
     -r "module=${AUTH_MODULE}" \
     -r "description=Validation test auth-handler plugin" \

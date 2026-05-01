@@ -40,8 +40,8 @@ task ci         # Full pipeline
 
 ## Solution Structure
 
-- `solution.yaml` -- Solution specification (resolvers, workflow, testing)
-- `templates/` -- Go template files (using `<%` / `%>` delimiters)
+- `scafctl/solution.yaml` -- Solution specification (resolvers, workflow, testing)
+- `scafctl/templates/` -- Go template files (using `<%` / `%>` delimiters)
 
 ## Template Conventions
 

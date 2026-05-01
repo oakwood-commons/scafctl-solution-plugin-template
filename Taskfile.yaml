@@ -3,7 +3,7 @@ version: "3"
 
 vars:
   SCAFCTL_MIN_VERSION: "0.35.0"
-  SOLUTION_FILE: "solution.yaml"
+  SOLUTION_FILE: "scafctl/solution.yaml"
 
 tasks:
   # ──────────────────────────────────────────────────────────────────────────────

@@ -14,7 +14,7 @@ jobs:
       - name: Check DCO sign-off
         run: |
           set -e
-          COMMITS=$(git log --format='%H' origin/main..HEAD 2>/dev/null || git log --format='%H' HEAD~1..HEAD)
+          COMMITS=$(git log --format='%H' --no-merges origin/main..HEAD 2>/dev/null || git log --format='%H' --no-merges HEAD~1..HEAD)
           FAILED=0
           for sha in $COMMITS; do
             if ! git log -1 --format='%B' "$sha" | grep -qi "^Signed-off-by:"; then

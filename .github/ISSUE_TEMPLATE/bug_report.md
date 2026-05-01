@@ -14,7 +14,7 @@ assignees: ""
 
 ```bash
 # Command that triggers the issue
-scafctl run solution -f solution.yaml -r name=... -r module=... ...
+scafctl run solution -f scafctl/solution.yaml -r name=... -r module=... ...
 ```
 
 ## Expected Behavior

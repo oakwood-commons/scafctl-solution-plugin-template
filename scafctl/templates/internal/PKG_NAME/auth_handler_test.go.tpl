@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/oakwood-commons/scafctl-plugin-sdk/auth"
 	sdkplugin "github.com/oakwood-commons/scafctl-plugin-sdk/plugin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,7 +80,7 @@ func TestGetToken(t *testing.T) {
 
 	t.Run("not authenticated", func(t *testing.T) {
 		_, err := p.GetToken(context.Background(), HandlerName, sdkplugin.TokenRequest{})
-		assert.ErrorIs(t, err, auth.ErrNotAuthenticated)
+		assert.EqualError(t, err, "not authenticated")
 	})
 
 	t.Run("unknown handler", func(t *testing.T) {
