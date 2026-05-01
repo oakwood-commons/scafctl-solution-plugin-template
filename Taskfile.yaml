@@ -126,10 +126,14 @@ tasks:
     cmds:
       - |
         set -e
-        echo "Publishing plugin-template@{{.VERSION}} to {{.REGISTRY}}..."
+        echo "Building plugin-template@{{.VERSION}} into local catalog..."
+        scafctl build solution -f "{{.SOLUTION_FILE}}" \
+          --name plugin-template \
+          --version "{{.VERSION}}" \
+          --force
+        echo "Pushing plugin-template@{{.VERSION}} to {{.REGISTRY}}..."
         scafctl catalog push "plugin-template@{{.VERSION}}" \
           --catalog "{{.REGISTRY}}" \
-          --kind solution \
           --sbom \
           --force
         echo "Published successfully."
