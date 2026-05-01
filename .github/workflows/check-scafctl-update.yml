@@ -1,0 +1,42 @@
+name: Check scafctl updates
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for new scafctl release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          LATEST=$(curl -s https://api.github.com/repos/oakwood-commons/scafctl/releases/latest | jq -r .tag_name)
+          PINNED=$(grep 'SCAFCTL_MIN_VERSION' Taskfile.yaml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+
+          echo "Latest scafctl release: ${LATEST}"
+          echo "Pinned minimum version: ${PINNED}"
+
+          LATEST_CLEAN="${LATEST#v}"
+          if [ "$LATEST_CLEAN" != "$PINNED" ]; then
+            echo ""
+            echo "A newer scafctl version is available."
+            echo "Consider updating SCAFCTL_MIN_VERSION in Taskfile.yaml"
+            echo "and running 'task ci' to verify compatibility."
+
+            # Check if an issue already exists
+            EXISTING=$(gh issue list --repo "${{ github.repository }}" --label "enhancement" --search "Update scafctl minimum version" --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+            if [ -z "$EXISTING" ]; then
+              gh issue create \
+                --repo "${{ github.repository }}" \
+                --title "Update scafctl minimum version to ${LATEST}" \
+                --body "A new scafctl release (${LATEST}) is available. Current minimum: ${PINNED}.\n\nPlease verify compatibility and update \`SCAFCTL_MIN_VERSION\` in \`Taskfile.yaml\`." \
+                --label "enhancement"
+            fi
+          else
+            echo "Already up to date."
+          fi

@@ -1,0 +1,6 @@
+.task/
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+tea_debug.log

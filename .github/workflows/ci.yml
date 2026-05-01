@@ -1,0 +1,60 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+
+      - name: Install scafctl
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/oakwood-commons/scafctl/releases/latest | jq -r .tag_name)
+          curl -sSL "https://github.com/oakwood-commons/scafctl/releases/download/${LATEST}/scafctl_${LATEST#v}_linux_amd64.tar.gz" | tar xz
+          sudo mv scafctl /usr/local/bin/
+          scafctl version
+
+      - name: Lint
+        run: task lint
+
+      - name: Test
+        run: task test
+
+  validate-output:
+    runs-on: ubuntu-latest
+    needs: [lint-and-test]
+    strategy:
+      matrix:
+        plugin_type: [provider, auth-handler]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+
+      - name: Install scafctl
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/oakwood-commons/scafctl/releases/latest | jq -r .tag_name)
+          curl -sSL "https://github.com/oakwood-commons/scafctl/releases/download/${LATEST}/scafctl_${LATEST#v}_linux_amd64.tar.gz" | tar xz
+          sudo mv scafctl /usr/local/bin/
+          scafctl version
+
+      - name: Validate ${{ matrix.plugin_type }} output
+        run: task validate
+        env:
+          VALIDATE_PLUGIN_TYPE: ${{ matrix.plugin_type }}

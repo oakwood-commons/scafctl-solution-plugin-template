@@ -1,0 +1,31 @@
+name: DCO
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check DCO sign-off
+        run: |
+          set -e
+          COMMITS=$(git log --format='%H' origin/main..HEAD 2>/dev/null || git log --format='%H' HEAD~1..HEAD)
+          FAILED=0
+          for sha in $COMMITS; do
+            if ! git log -1 --format='%B' "$sha" | grep -qi "^Signed-off-by:"; then
+              echo "FAIL: Commit $sha is missing Signed-off-by"
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo ""
+            echo "All commits must include a DCO sign-off line."
+            echo "Use: git commit -s -S -m 'your message'"
+            exit 1
+          fi
+          echo "All commits have DCO sign-off."
