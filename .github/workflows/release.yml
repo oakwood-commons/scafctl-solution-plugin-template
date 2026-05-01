@@ -52,7 +52,7 @@ jobs:
 
       - name: Login to ghcr.io
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | scafctl auth login ghcr.io --username ${{ github.actor }} --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | scafctl catalog login ghcr.io --username ${{ github.actor }} --password @-
 
       - name: Publish to registry
         run: task publish VERSION=${GITHUB_REF_NAME#v}
