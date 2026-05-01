@@ -1,0 +1,66 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+
+      - name: Install scafctl
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/oakwood-commons/scafctl/releases/latest | jq -r .tag_name)
+          curl -sSL "https://github.com/oakwood-commons/scafctl/releases/download/${LATEST}/scafctl_${LATEST#v}_linux_amd64.tar.gz" | tar xz
+          sudo mv scafctl /usr/local/bin/
+          scafctl version
+
+      - name: Run CI pipeline
+        run: task ci
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [verify]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+
+      - name: Install scafctl
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/oakwood-commons/scafctl/releases/latest | jq -r .tag_name)
+          curl -sSL "https://github.com/oakwood-commons/scafctl/releases/download/${LATEST}/scafctl_${LATEST#v}_linux_amd64.tar.gz" | tar xz
+          sudo mv scafctl /usr/local/bin/
+          scafctl version
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Login to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | scafctl auth login ghcr.io --username ${{ github.actor }} --password-stdin
+
+      - name: Publish to registry
+        run: task publish VERSION=${GITHUB_REF_NAME#v}
+
+      - name: Sign OCI artifact (keyless)
+        run: task sign VERSION=${GITHUB_REF_NAME#v}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
