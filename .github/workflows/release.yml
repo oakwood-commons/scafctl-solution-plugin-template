@@ -54,6 +54,13 @@ jobs:
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | scafctl catalog login ghcr.io --username ${{ github.actor }} --password @-
 
+      - name: Login to ghcr.io (OCI/cosign)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish to registry
         run: task publish VERSION=${GITHUB_REF_NAME#v}
 
