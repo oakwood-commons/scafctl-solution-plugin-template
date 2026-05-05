@@ -1,7 +1,7 @@
 apiVersion: scafctl.io/v1
 kind: Solution
 metadata:
-  name: plugin-template
+  name: scafctl-plugin-template
   displayName: Plugin Project Template
   description: >-
     Scaffolds a complete scafctl plugin project (provider or auth-handler) with
@@ -20,6 +20,7 @@ metadata:
 bundle:
   include:
     - templates/**
+    - static/**
 
 spec:
   resolvers:
@@ -35,6 +36,9 @@ spec:
           - provider: parameter
             inputs:
               key: name
+          - provider: static
+            inputs:
+              value: scafctl-plugin-example
       validate:
         with:
           - provider: validation
@@ -55,6 +59,9 @@ spec:
           - provider: parameter
             inputs:
               key: module
+          - provider: static
+            inputs:
+              value: github.com/example/scafctl-plugin-example
       validate:
         with:
           - provider: validation
@@ -71,6 +78,9 @@ spec:
           - provider: parameter
             inputs:
               key: description
+          - provider: static
+            inputs:
+              value: Example plugin scaffold
       validate:
         with:
           - provider: validation
@@ -263,10 +273,37 @@ spec:
           - provider: directory
             inputs:
               operation: list
+              path: scafctl/templates
+              recursive: true
+              filterGlob: "*.tpl"
+              includeContent: true
+          - provider: directory
+            inputs:
+              operation: list
               path: templates
               recursive: true
               filterGlob: "*.tpl"
               includeContent: true
+
+    static_files:
+      description: "Read all static scaffold files from disk"
+      type: any
+      resolve:
+        with:
+          - provider: directory
+            inputs:
+              operation: list
+              path: scafctl/static
+              recursive: true
+              includeContent: true
+              filesOnly: true
+          - provider: directory
+            inputs:
+              operation: list
+              path: static
+              recursive: true
+              includeContent: true
+              filesOnly: true
 
     # ── Render Templates ─────────────────────────────────────────────────────
     rendered:
@@ -294,8 +331,8 @@ spec:
                 expr: "_.template_files.entries"
 
     # Rewrite paths: replace PLUGIN_NAME and PKG_NAME placeholders
-    output_files:
-      description: "Final file entries with correct paths"
+    rendered_output_files:
+      description: "Rendered template entries with correct paths"
       type: any
       resolve:
         with:
@@ -316,6 +353,16 @@ spec:
                     ? !e.path.endsWith("provider.go") && !e.path.endsWith("provider_test.go")
                     : !e.path.endsWith("auth_handler.go") && !e.path.endsWith("auth_handler_test.go")
                 )
+
+    output_files:
+      description: "Final scaffold file entries including rendered and static files"
+      type: any
+      resolve:
+        with:
+          - provider: static
+            inputs:
+              value:
+                expr: '_.rendered_output_files + _.static_files.entries'
 
   # ── Workflow ─────────────────────────────────────────────────────────────
   workflow:
@@ -351,6 +398,162 @@ spec:
           visibility:
             rslvr: repo_visibility
           auto_init: true
+
+      # Apply repository settings that match plugin-template conventions
+      update-github-repo-settings:
+        description: "Configure repository merge options and general settings"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: update_repo
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          delete_branch_on_merge: true
+          allow_squash_merge: true
+          allow_merge_commit: false
+          allow_rebase_merge: false
+          has_issues: true
+          has_projects: false
+          has_wiki: false
+
+      # Require web UI commits to include sign-off metadata
+      require-web-commit-signoff:
+        description: "Require web commits to include sign-off"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [update-github-repo-settings]
+        onError: continue
+        inputs:
+          operation: api_call
+          method: PATCH
+          endpoint:
+            expr: '"repos/" + _.repo_path'
+          request_body:
+            expr: '{"web_commit_signoff_required": true}'
+
+      # Enable advanced security features when the org plan allows it
+      enable-advanced-security:
+        description: "Enable advanced security, secret scanning, and push protection"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [update-github-repo-settings]
+        onError: continue
+        inputs:
+          operation: api_call
+          method: PATCH
+          endpoint:
+            expr: '"repos/" + _.repo_path'
+          request_body:
+            expr: '{"security_and_analysis": {"advanced_security": {"status": "enabled"}, "secret_scanning": {"status": "enabled"}, "secret_scanning_push_protection": {"status": "enabled"}}}'
+
+      create-label-bug:
+        description: "Create the bug label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: bug
+          color: d73a4a
+          label_description: Something is not working
+
+      create-label-enhancement:
+        description: "Create the enhancement label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: enhancement
+          color: a2eeef
+          label_description: New feature or request
+
+      create-label-documentation:
+        description: "Create the documentation label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: documentation
+          color: 0075ca
+          label_description: Improvements or additions to documentation
+
+      create-label-security:
+        description: "Create the security label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: security
+          color: b60205
+          label_description: Security-related change or issue
+
+      create-label-breaking-change:
+        description: "Create the breaking-change label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: breaking-change
+          color: 5319e7
+          label_description: Change that is not backward compatible
+
+      create-label-template:
+        description: "Create the template label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: template
+          color: cfd3d7
+          label_description: Scaffolding or template-related work
 
       # Configure branch protection via repository rulesets
       configure-branch-ruleset:
@@ -501,7 +704,7 @@ spec:
               {{- end }}
                 Run: task test
                 Run: task build
-                Test with scafctl: scafctl run -p {{ .provider_name }}
+                Test with scafctl: scafctl run provider {{ .provider_name }} value=hello
 
       # Warn about missing go.sum (only when creating a repo)
       go-sum-warning:
@@ -525,7 +728,6 @@ spec:
         description: Base test case (provider plugin)
         command: [run, resolver]
         args: ["-o", "json", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/test/scafctl-plugin-test", "-r", "description=Test plugin", "-r", "capabilities=from", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=provider"]
-        files: ["templates/**"]
         tags: [plugin-template]
         assertions:
           - expression: __exitCode == 0
@@ -534,7 +736,6 @@ spec:
         description: Base test case (auth-handler plugin)
         command: [run, resolver]
         args: ["-o", "json", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/test/scafctl-plugin-test", "-r", "description=Test auth handler", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=auth-handler"]
-        files: ["templates/**"]
         tags: [plugin-template]
         assertions:
           - expression: __exitCode == 0
@@ -559,6 +760,32 @@ spec:
           - expression: __output.template_files.totalCount > 20
             message: "Should load at least 20 template files"
 
+      loads-static-files:
+        description: Verify static AI files are loaded
+        extends: [_base]
+        command: [run, resolver, static_files]
+        assertions:
+          - expression: __output.static_files.totalCount >= 11
+            message: "Should load the static AI support files"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/copilot-instructions.md")'
+            message: "Static files should include copilot instructions"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/agents/go-reviewer.agent.md")'
+            message: "Static files should include the Go reviewer agent"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/go-review.prompt.md")'
+            message: "Static files should include the Go review prompt"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/provider-review.prompt.md")'
+            message: "Static files should include the provider review prompt"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/instructions/scafctl-provider.instructions.md")'
+            message: "Static files should include provider instructions"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/provider-implementation.prompt.md")'
+            message: "Static files should include the provider implementation prompt"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/instructions/scafctl-auth-handler.instructions.md")'
+            message: "Static files should include auth-handler instructions"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/auth-handler-review.prompt.md")'
+            message: "Static files should include the auth-handler review prompt"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/auth-handler-implementation.prompt.md")'
+            message: "Static files should include the auth-handler implementation prompt"
+
       renders-templates:
         description: Verify templates are rendered with variables
         extends: [_base]
@@ -574,6 +801,26 @@ spec:
             message: "No paths should have PLUGIN_NAME placeholder remaining"
           - expression: '!__output.output_files.exists(e, e.path.endsWith(".tpl"))'
             message: "No paths should have .tpl extension remaining"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/go-review.prompt.md")'
+            message: "Static AI files should be included in final output"
+          - expression: '__output.output_files.exists(e, e.path == ".github/copilot-instructions.md")'
+            message: "Final output should include static copilot instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/instructions/go-conventions.instructions.md")'
+            message: "Final output should include static Go conventions instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/instructions/scafctl-provider.instructions.md")'
+            message: "Final output should include static provider instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/provider-review.prompt.md")'
+            message: "Final output should include the provider review prompt"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/provider-implementation.prompt.md")'
+            message: "Final output should include the provider implementation prompt"
+          - expression: '__output.output_files.exists(e, e.path == ".github/instructions/scafctl-auth-handler.instructions.md")'
+            message: "Final output should include auth-handler instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/auth-handler-review.prompt.md")'
+            message: "Final output should include the auth-handler review prompt"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/auth-handler-implementation.prompt.md")'
+            message: "Final output should include the auth-handler implementation prompt"
+          - expression: '!__output.output_files.exists(e, e.path == ".github/copilot-instructions.md" && e.content.contains("<%"))'
+            message: "Static AI files should not be treated as templates"
 
       renders-auth-handler-templates:
         description: Verify auth-handler templates exclude provider files
@@ -590,6 +837,14 @@ spec:
             message: "Auth-handler should include auth_handler.go"
           - expression: '__output.output_files.exists(e, e.path.endsWith("auth_handler_test.go"))'
             message: "Auth-handler should include auth_handler_test.go"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/go-review.prompt.md")'
+            message: "Auth-handler output should also include static AI files"
+          - expression: '__output.output_files.exists(e, e.path == ".github/instructions/scafctl-provider.instructions.md")'
+            message: "Auth-handler output should also include provider instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/instructions/scafctl-auth-handler.instructions.md")'
+            message: "Auth-handler output should also include auth-handler instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/auth-handler-implementation.prompt.md")'
+            message: "Auth-handler output should also include the auth-handler implementation prompt"
 
       provider-excludes-auth-handler:
         description: Verify provider templates exclude auth-handler files

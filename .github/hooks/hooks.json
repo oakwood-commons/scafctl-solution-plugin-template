@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "type": "command",
+        "windows": "powershell -ExecutionPolicy Bypass -File .github/hooks/scripts/auto-lint.ps1",
+        "linux": "sh .github/hooks/scripts/auto-lint.sh",
+        "osx": "sh .github/hooks/scripts/auto-lint.sh",
+        "timeout": 15
+      }
+    ],
+    "PreToolUse": [
+      {
+        "type": "command",
+        "windows": "powershell -ExecutionPolicy Bypass -File .github/hooks/scripts/auth-guard.ps1",
+        "linux": "sh .github/hooks/scripts/auth-guard.sh",
+        "osx": "sh .github/hooks/scripts/auth-guard.sh",
+        "timeout": 5
+      }
+    ]
+  }
+}

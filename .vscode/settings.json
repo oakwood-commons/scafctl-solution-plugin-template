@@ -1,0 +1,20 @@
+{
+  "github.copilot.chat.terminalCommand.allowList": [
+    "scafctl lint *",
+    "scafctl test *",
+    "scafctl eval *",
+    "scafctl explain *",
+    "scafctl get *",
+    "scafctl snapshot *",
+    "scafctl solution *",
+    "scafctl run resolver *",
+    "scafctl version *",
+    "scafctl examples *",
+    "scafctl auth status*",
+    "scafctl catalog list*",
+    "scafctl catalog remote list*",
+    "scafctl catalog inspect*",
+    "scafctl bundle *"
+  ],
+  "files.eol": "\n"
+}

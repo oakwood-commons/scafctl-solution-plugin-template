@@ -3,5 +3,5 @@
 Thumbs.db
 *.tmp
 *.temp
-tea_debug.log
 /local/
+/scafctl-plugin-example
