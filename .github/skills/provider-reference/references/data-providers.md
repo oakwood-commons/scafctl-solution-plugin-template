@@ -142,6 +142,29 @@ resolve:
 
 **Key fields**: `path` (repo location), `repository` (URL for clone), `branch`, `message` (for commit), `files` (for add/commit), `remote` (default: origin), `force`, `tag`, `depth` (shallow clone).
 
+## directory
+
+List directory contents during resolver execution. This is commonly used to gather template or static file trees before rendering or writing them.
+
+~~~yaml
+resolve:
+  with:
+    - provider: directory
+      inputs:
+        operation: list
+        path: "./scafctl/templates"
+        # recursive: true
+        # includeContent: false
+        # filesOnly: true
+        # filterGlob: "**/*.tpl"
+~~~
+
+**Common operations in resolvers**: `list`
+
+**Useful fields**: `path`, `recursive`, `includeContent`, `filesOnly`, `filterGlob`, `maxDepth`.
+
+**Output**: Returns an object with listing metadata plus `entries`. Access files via `expr: "_.templateFiles.entries"`.
+
 ## secret
 
 Retrieve encrypted secrets from the scafctl secrets store.

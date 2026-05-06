@@ -25,6 +25,10 @@ func TestGetProviderDescriptor(t *testing.T) {
 		assert.NotEmpty(t, desc.Description)
 		assert.NotNil(t, desc.Schema)
 		assert.NotEmpty(t, desc.Capabilities)
+		assert.NotNil(t, desc.OutputSchemas, "OutputSchemas must be present")
+		for _, cap := range desc.Capabilities {
+			assert.Contains(t, desc.OutputSchemas, cap, "OutputSchemas must include capability %s", cap)
+		}
 	})
 
 	t.Run("unknown provider", func(t *testing.T) {

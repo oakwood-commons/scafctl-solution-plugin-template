@@ -168,7 +168,11 @@ Key providers:
 When editing provider scaffolding, reason about the generated provider contract, not just template syntax.
 
 - Keep `GetProviderDescriptor`, `ExecuteProvider`, and `DescribeWhatIf` behavior aligned.
-- Treat schema fields, README examples, generated tests, and AI guidance as one contract surface.
+- Generated descriptors must include `OutputSchemas` for every declared capability. Missing output schemas cause silent registration failure in the host (surfaced as `provider not found`).
+- Treat schema fields, output schemas, README examples, generated tests, and AI guidance as one contract surface.
+- Keep provider identity guidance consistent across the generated repo: the provider name comes from the published plugin or catalog name plus the RPC contract, not the raw binary filename.
+- Do not assume renaming a binary alone will make `provider:<name>` resolve.
+- On Windows, the executable still needs a runnable `.exe`, but names like `scafctl-plugin-<provider>.exe` are convention rather than a loader requirement.
 - Use `.github/instructions/scafctl-provider.instructions.md` when editing provider templates.
 - Use `.github/prompts/provider-implementation.prompt.md` when implementing provider-facing scaffold changes.
 - Use `.github/prompts/provider-review.prompt.md` to review provider-facing scaffold changes.

@@ -4,9 +4,7 @@ vars:
   BINARY: <% .name %>
   DIST: "{{.ROOT_DIR | toSlash}}/dist"
   COVER: "{{.ROOT_DIR | toSlash}}/cover"
-
-env:
-  CGO_ENABLED: "0"
+  VERSION: '{{default "" .VERSION}}'
 
 tasks:
   default:
@@ -15,6 +13,8 @@ tasks:
 
   build:
     desc: Build the plugin binary
+    env:
+      CGO_ENABLED: "0"
     sources:
       - "**/*.go"
       - go.mod
@@ -28,16 +28,58 @@ tasks:
         -o {{.DIST}}/{{.BINARY}}
         ./cmd/{{.BINARY}}/
 
+  publish:local:
+    desc: Build and install the plugin into the local scafctl catalog
+    deps: [build]
+    cmds:
+      - >-
+        scafctl build plugin --force
+        --name <% .provider_name %>
+        --kind <% .plugin_type %>
+        --version 0.1.0
+        --platform windows/amd64={{.DIST}}/{{.BINARY}}
+
+  release:tag:
+    desc: "Create and push a signed release tag (usage: task release:tag VERSION=0.1.1)"
+    requires:
+      vars: [VERSION]
+    cmds:
+      - git tag -s v{{.VERSION}} -m "v{{.VERSION}}"
+      - git push origin v{{.VERSION}}
+
+  release:local:
+    desc: "Build and install a versioned local catalog artifact (usage: task release:local VERSION=0.1.1)"
+    requires:
+      vars: [VERSION]
+    deps: [build]
+    cmds:
+      - >-
+        scafctl build plugin --force
+        --name <% .provider_name %>
+        --kind <% .plugin_type %>
+        --version {{.VERSION}}
+        --platform windows/amd64={{.DIST}}/{{.BINARY}}
+
   test:
     desc: Run tests
     cmds:
-      - go test -race -count=1 -shuffle=on -timeout 5m ./...
+      - >-
+        if command -v gcc >/dev/null 2>&1; then
+          CGO_ENABLED=1 go test -race -count=1 -shuffle=on -timeout 5m ./...;
+        else
+          go test -count=1 -shuffle=on -timeout 5m ./...;
+        fi
 
   test:cover:
     desc: Run tests with coverage
     cmds:
       - mkdir -p {{.COVER}}
-      - go test -race -coverprofile={{.COVER}}/cover.out -covermode=atomic ./...
+      - >-
+        if command -v gcc >/dev/null 2>&1; then
+          CGO_ENABLED=1 go test -race -coverprofile={{.COVER}}/cover.out -covermode=atomic ./...;
+        else
+          go test -coverprofile={{.COVER}}/cover.out -covermode=atomic ./...;
+        fi
 
   lint:
     desc: Run linter

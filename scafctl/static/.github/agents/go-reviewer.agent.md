@@ -49,6 +49,7 @@ When invoked directly, use this procedure:
 ### HIGH -- Correctness
 - Thin wrappers that fail to forward required fields or options
 - Shared struct mutation that can leak state between operations
+- `OutputSchemas` missing entries for declared capabilities (causes silent registration failure)
 - Nil, empty, and zero-value edge cases not handled
 - Map iteration used where deterministic output ordering matters
 - `defer cancel()` placed too late after context creation

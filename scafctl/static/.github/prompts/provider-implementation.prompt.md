@@ -21,6 +21,7 @@ Change provider behavior without creating drift between descriptor, runtime beha
 ## Checks
 
 - Capabilities match the implemented behavior.
+- `OutputSchemas` includes an entry for every declared capability.
 - Required schema fields match runtime expectations.
 - Unknown provider handling is consistent.
 - Nil, empty, and zero-value inputs are handled deliberately.

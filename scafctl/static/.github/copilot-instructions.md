@@ -25,11 +25,20 @@ tools over shell commands for scafctl-specific tasks.
 
 When this repository is a provider plugin, keep the provider contract coherent across all methods.
 
-- `GetProviderDescriptor` defines the public contract: name, description, capabilities, and schema.
+- `GetProviderDescriptor` defines the public contract: name, description, capabilities, schema, and output schemas.
+- `OutputSchemas` must include an entry for every declared capability. Missing output schemas cause host registration failure (reported as `provider not found`).
 - `ExecuteProvider` implements that contract and should reject unknown provider names consistently.
 - `DescribeWhatIf` should describe the same action without side effects.
 - `ConfigureProvider` should store host configuration, not perform heavy work.
 - `ExecuteProviderStream` and `ExtractDependencies` should only be customized when the provider really needs them.
+
+### Provider Naming And Binary Resolution
+
+- The provider name is the RPC contract returned by `GetProviders` and described by `GetProviderDescriptor`, not the raw binary filename.
+- Keep the published plugin or catalog name aligned with the provider name users reference in solutions.
+- The executable only needs to be a runnable plugin binary. On Windows that means the file must end in `.exe`.
+- Prefer binary names like `scafctl-plugin-<provider>` or `scafctl-plugin-<provider>.exe`, but treat that as a convention rather than a loader requirement.
+- Do not assume renaming the binary alone will make `provider:<name>` resolve. Provider identity comes from the published artifact name and the plugin RPC responses.
 
 Use `.github/instructions/scafctl-provider.instructions.md` for provider-specific implementation guidance.
 Use `.github/prompts/provider-implementation.prompt.md` when implementing provider changes.
@@ -58,11 +67,40 @@ Use `.github/prompts/auth-handler-review.prompt.md` when reviewing auth-handler 
 ## Build & Test Commands
 
 ~~~bash
-task build    # Build the plugin binary
-task test     # Run tests
-task lint     # Run linter
-task lint:fix # Run linter with auto-fix
+task build         # Build the plugin binary
+task test          # Run tests
+task lint          # Run linter
+task lint:fix      # Run linter with auto-fix
+task release:local # Package and install locally for end-to-end testing
+task ci            # Full CI pipeline (lint + test + build)
 ~~~
+
+## Local Testing Workflow
+
+The most reliable way to verify a provider works end-to-end is to install it
+locally and run a sample solution through the host:
+
+~~~bash
+task release:local VERSION=0.1.0
+scafctl run solution -f ./examples/solution.yaml
+~~~
+
+Direct `--plugin-dir` testing may not exercise the same registration path
+as catalog-installed plugins.
+
+## Release and Catalog Publishing
+
+A tagged release must publish both the provider artifact and refresh the
+catalog index. Publishing the artifact alone does not make the provider
+discoverable.
+
+The release workflow needs two kinds of auth:
+
+1. Container registry auth for OCI push (`docker login` or equivalent).
+2. scafctl auth for catalog operations (`scafctl auth login github --flow pat --registry ghcr.io --write-registry-auth`).
+
+Standard `docker login` is not sufficient for `scafctl catalog index push`.
+The publishing token needs `repo`, `read:packages`, and `write:packages` scopes.
 
 ## Critical Rules
 

@@ -42,13 +42,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-oci:
-    name: Publish OCI Artifact
+  publish-catalog:
+    name: Publish Catalog Artifact
     needs: release
     runs-on: ubuntu-latest
     permissions:
-      packages: write
       contents: read
+      packages: write
     steps:
       - name: Install scafctl
         env:
@@ -63,7 +63,7 @@ jobs:
           rm -rf "${TMP_DIR}"
 
       - name: Login to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.CATALOG_PUSH_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Download release archives
         env:
@@ -72,6 +72,16 @@ jobs:
           TAG="${GITHUB_REF#refs/tags/}"
           mkdir -p dist
           gh release download "${TAG}" --repo "${{ github.repository }}" --dir dist
+
+      - name: Authenticate scafctl for GHCR
+        env:
+          GH_TOKEN: ${{ secrets.CATALOG_PUSH_TOKEN != '' && secrets.CATALOG_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          scafctl auth login github \
+            --force \
+            --flow pat \
+            --registry ghcr.io \
+            --write-registry-auth
 
       - name: Extract binaries from archives
         run: |
@@ -96,12 +106,13 @@ jobs:
             rm -rf tmp_windows_amd64
           fi
 
-      - name: Build and push OCI artifact
+      - name: Build and push catalog artifact
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
           BINARY="<% .name %>"
 
           scafctl build plugin \
+            --force \
             --name "<% .provider_name %>" \
             --kind "<% .plugin_type %>" \
             --version "${VERSION}" \
@@ -113,6 +124,10 @@ jobs:
 
           scafctl catalog push \
             "<% .provider_name %>@${VERSION}" \
-            --catalog "ghcr.io/<% .registry_owner %>" \
+            --catalog "oci://ghcr.io/<% .registry_owner %>" \
             --kind "<% .plugin_type %>" \
             --force
+
+      - name: Refresh catalog index
+        run: |
+          scafctl catalog index push --catalog "oci://ghcr.io/<% .registry_owner %>"

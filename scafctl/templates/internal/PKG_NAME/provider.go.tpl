@@ -59,6 +59,20 @@ func (p *Plugin) GetProviderDescriptor(_ context.Context, providerName string) (
 				),
 			},
 		),
+		OutputSchemas: map[sdkprovider.Capability]*jsonschema.Schema{
+<%- range .capability_consts %>
+<%- if eq . "sdkprovider.CapabilityAction" %>
+			<% . %>: sdkhelper.ObjectSchema(nil, map[string]*jsonschema.Schema{
+				"success": {Type: "boolean"},
+				"data":    {},
+			}),
+<%- else %>
+			<% . %>: sdkhelper.ObjectSchema(nil, map[string]*jsonschema.Schema{
+				"result": {},
+			}),
+<%- end %>
+<%- end %>
+		},
 	}, nil
 }
 

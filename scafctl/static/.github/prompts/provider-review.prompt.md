@@ -16,6 +16,7 @@ For each changed provider file, verify all of the following:
 
 - `GetProviderDescriptor` accurately describes the implementation.
 - Capabilities match the behavior the provider actually supports.
+- `OutputSchemas` includes an entry for every declared capability. Missing output schemas cause silent host registration failure.
 - Schema fields, required fields, and examples match runtime expectations.
 - Output shape is stable and consistent with docs and tests.
 

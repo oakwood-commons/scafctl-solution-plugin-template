@@ -39,13 +39,14 @@ scafctl uses scafctl's provider system. Always call `get_provider_schema` for ex
 | cel | transform | CEL expression evaluation | [transform-providers.md](./references/transform-providers.md) |
 | go-template | transform, action | Go template rendering | [transform-providers.md](./references/transform-providers.md), [action-providers.md](./references/action-providers.md) |
 | validation | validation | CEL-based rule validation | [transform-providers.md](./references/transform-providers.md) |
-| directory | action | Create, remove, copy, list directories | [action-providers.md](./references/action-providers.md) |
+| directory | from, action | List directories in resolvers and manage directories in actions | [data-providers.md](./references/data-providers.md), [action-providers.md](./references/action-providers.md) |
 | message | action | Terminal output and structured data display | [action-providers.md](./references/action-providers.md) |
 
 ## Key Rules
 
 - **Never set `type: string`** on resolvers using http, github, hcl, or file (parse mode) -- they return objects
 - **Prefer `raw: true`** on exec and env when you just need the value string
-- **Always use `get_provider_schema`** MCP tool for exact field names before writing YAML
+- **Always use get_provider_schema** MCP tool for exact field names before writing YAML
+- **Never claim a built-in provider is unavailable** until you verify it with list_providers, get_provider_schema, or the CLI
 - **Use `authProvider: entra`** on http requests to Ford APIs -- never hardcode tokens
 - **Mark `sensitive: true`** on resolvers using the secret provider

@@ -64,7 +64,7 @@ actions:
 
 ## directory (action)
 
-Directory operations: create, remove, copy, list.
+Directory operations: create, remove, copy, list. The same provider also supports resolver-side `operation: list`; see `data-providers.md` when you need to enumerate files before actions run.
 
 ~~~yaml
 actions:
