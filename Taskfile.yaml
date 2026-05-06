@@ -25,7 +25,9 @@ tasks:
         echo "  task test       - Run solution functional tests"
         echo "  task validate   - Render + verify generated output compiles"
         echo "  task ci         - Full CI pipeline (lint + test + validate)"
+        echo "  task publish:local - Build into local catalog"
         echo "  task publish    - Push to OCI registry"
+        echo "  task release:tag - Create and push a signed tag"
         echo "  task tag        - Create a signed git tag"
         echo ""
         echo "Minimum scafctl version: {{.SCAFCTL_MIN_VERSION}}"
@@ -114,6 +116,48 @@ tasks:
   # Publishing
   # ──────────────────────────────────────────────────────────────────────────────
 
+  publish:local:
+    desc: "Build solution into the local catalog for testing"
+    deps: [check-scafctl]
+    cmds:
+      - |
+        set -e
+        echo "Building plugin-template into local catalog..."
+        scafctl build solution -f "{{.SOLUTION_FILE}}" \
+          --name plugin-template \
+          --version 0.0.0-local \
+          --force
+        echo "Local publish complete. Test with: scafctl run solution --catalog local plugin-template"
+
+  release:local:
+    desc: "Build a versioned local catalog artifact (usage: task release:local VERSION=1.0.0)"
+    deps: [check-scafctl]
+    vars:
+      VERSION: '{{ .VERSION | default "" }}'
+    preconditions:
+      - sh: '[ -n "{{.VERSION}}" ]'
+        msg: "VERSION is required. Usage: task release:local VERSION=1.0.0"
+    cmds:
+      - |
+        set -e
+        echo "Building plugin-template@{{.VERSION}} into local catalog..."
+        scafctl build solution -f "{{.SOLUTION_FILE}}" \
+          --name plugin-template \
+          --version "{{.VERSION}}" \
+          --force
+        echo "Local release complete."
+
+  release:tag:
+    desc: "Create and push a signed release tag (usage: task release:tag VERSION=1.0.0)"
+    vars:
+      VERSION: '{{ .VERSION | default "" }}'
+    preconditions:
+      - sh: '[ -n "{{.VERSION}}" ]'
+        msg: "VERSION is required. Usage: task release:tag VERSION=1.0.0"
+    cmds:
+      - git tag -s v{{.VERSION}} -m "v{{.VERSION}}"
+      - git push origin v{{.VERSION}}
+
   publish:
     desc: "Push solution to OCI registry with SBOM (usage: task publish VERSION=1.0.0)"
     deps: [check-scafctl]
@@ -136,6 +180,8 @@ tasks:
           --catalog "{{.REGISTRY}}" \
           --sbom \
           --force
+        echo "Refreshing catalog index..."
+        scafctl catalog index push --catalog "{{.REGISTRY}}"
         echo "Published successfully."
 
   # ──────────────────────────────────────────────────────────────────────────────

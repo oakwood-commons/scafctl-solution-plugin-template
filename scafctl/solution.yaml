@@ -1,7 +1,7 @@
 apiVersion: scafctl.io/v1
 kind: Solution
 metadata:
-  name: plugin-template
+  name: scafctl-plugin-template
   displayName: Plugin Project Template
   description: >-
     Scaffolds a complete scafctl plugin project (provider or auth-handler) with
@@ -20,6 +20,7 @@ metadata:
 bundle:
   include:
     - templates/**
+    - static/**
 
 spec:
   resolvers:
@@ -35,6 +36,9 @@ spec:
           - provider: parameter
             inputs:
               key: name
+          - provider: static
+            inputs:
+              value: scafctl-plugin-example
       validate:
         with:
           - provider: validation
@@ -55,6 +59,9 @@ spec:
           - provider: parameter
             inputs:
               key: module
+          - provider: static
+            inputs:
+              value: github.com/example/scafctl-plugin-example
       validate:
         with:
           - provider: validation
@@ -71,6 +78,9 @@ spec:
           - provider: parameter
             inputs:
               key: description
+          - provider: static
+            inputs:
+              value: Example plugin scaffold
       validate:
         with:
           - provider: validation
@@ -117,6 +127,45 @@ spec:
           - provider: static
             inputs:
               value: "false"
+
+    output_mode:
+      description: "Scaffold output mode: full project or AI files only"
+      type: string
+      example: full
+      resolve:
+        with:
+          - provider: parameter
+            inputs:
+              key: output_mode
+          - provider: static
+            inputs:
+              value: full
+      validate:
+        with:
+          - provider: validation
+            inputs:
+              expression: '__self in ["full", "ai-only"]'
+              message: "output_mode must be full or ai-only"
+
+    output_path:
+      description: "Where to write files when create_repo=false. Use . to update the current repository in place."
+      type: string
+      example: .
+      resolve:
+        with:
+          - provider: parameter
+            inputs:
+              key: output_path
+          - provider: static
+            inputs:
+              value:
+                expr: '_.name'
+      validate:
+        with:
+          - provider: validation
+            inputs:
+              expression: 'size(__self) >= 1'
+              message: "output_path is required"
 
     plugin_type:
       description: "Plugin type: provider or auth-handler"
@@ -263,10 +312,37 @@ spec:
           - provider: directory
             inputs:
               operation: list
+              path: scafctl/templates
+              recursive: true
+              filterGlob: "*.tpl"
+              includeContent: true
+          - provider: directory
+            inputs:
+              operation: list
               path: templates
               recursive: true
               filterGlob: "*.tpl"
               includeContent: true
+
+    static_files:
+      description: "Read all static scaffold files from disk"
+      type: any
+      resolve:
+        with:
+          - provider: directory
+            inputs:
+              operation: list
+              path: scafctl/static
+              recursive: true
+              includeContent: true
+              filesOnly: true
+          - provider: directory
+            inputs:
+              operation: list
+              path: static
+              recursive: true
+              includeContent: true
+              filesOnly: true
 
     # ── Render Templates ─────────────────────────────────────────────────────
     rendered:
@@ -294,8 +370,8 @@ spec:
                 expr: "_.template_files.entries"
 
     # Rewrite paths: replace PLUGIN_NAME and PKG_NAME placeholders
-    output_files:
-      description: "Final file entries with correct paths"
+    rendered_output_files:
+      description: "Rendered template entries with correct paths"
       type: any
       resolve:
         with:
@@ -317,9 +393,59 @@ spec:
                     : !e.path.endsWith("auth_handler.go") && !e.path.endsWith("auth_handler_test.go")
                 )
 
+    output_files:
+      description: "Final scaffold file entries including rendered and static files"
+      type: any
+      resolve:
+        with:
+          - provider: static
+            inputs:
+              value:
+                expr: '(_.create_repo == "true" || _.output_mode == "full") ? (_.rendered_output_files + _.static_files.entries) : _.static_files.entries'
+
   # ── Workflow ─────────────────────────────────────────────────────────────
   workflow:
     actions:
+      help:
+        description: "Show usage examples for the plugin template solution"
+        provider: message
+        inputs:
+          type: plain
+          message: |
+            Plugin Template Solution
+
+            Common commands:
+              Show this help:
+                scafctl run action help -f ./scafctl/solution.yaml
+
+              Scaffold a local plugin repository:
+                scafctl run solution -f ./scafctl/solution.yaml -r name=scafctl-plugin-echo -r module=github.com/myorg/scafctl-plugin-echo -r description="Echo provider"
+
+              Update only AI support files in an existing repository:
+                scafctl run solution -f ./scafctl/solution.yaml -r name=scafctl-plugin-echo -r module=github.com/myorg/scafctl-plugin-echo -r description="Echo provider" -r output_mode=ai-only -r output_path=.
+
+              Create and configure a GitHub repository:
+                scafctl run solution -f ./scafctl/solution.yaml -r name=scafctl-plugin-echo -r module=github.com/myorg/scafctl-plugin-echo -r description="Echo provider" -r create_repo=true -r repo_visibility=private
+
+              Inspect resolver output without writing files:
+                scafctl run resolver -f ./scafctl/solution.yaml
+
+            Key inputs:
+              name           Plugin repository name
+              module         Go module path
+              description    Short plugin description
+              plugin_type    provider or auth-handler
+              capabilities   Provider capabilities (ignored for auth-handler)
+              output_mode    full or ai-only
+              output_path    Local output directory when create_repo=false
+              create_repo    true to create and configure the GitHub repository
+              repo_visibility public or private
+
+            Notes:
+              - Local runs write to output_path, which defaults to name.
+              - ai-only mode updates only .github AI support files.
+              - create_repo=true pushes the scaffold through the GitHub provider instead of writing locally.
+
       # Write all scaffolded files (skip when pushing to GitHub)
       write-files:
         description: "Write rendered plugin project files to output directory"
@@ -329,7 +455,7 @@ spec:
         inputs:
           operation: write-tree
           basePath:
-            expr: "_.name"
+            expr: "_.output_path"
           entries:
             rslvr: output_files
           onConflict: skip-unchanged
@@ -351,6 +477,162 @@ spec:
           visibility:
             rslvr: repo_visibility
           auto_init: true
+
+      # Apply repository settings that match plugin-template conventions
+      update-github-repo-settings:
+        description: "Configure repository merge options and general settings"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: update_repo
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          delete_branch_on_merge: true
+          allow_squash_merge: true
+          allow_merge_commit: false
+          allow_rebase_merge: false
+          has_issues: true
+          has_projects: false
+          has_wiki: false
+
+      # Require web UI commits to include sign-off metadata
+      require-web-commit-signoff:
+        description: "Require web commits to include sign-off"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [update-github-repo-settings]
+        onError: continue
+        inputs:
+          operation: api_call
+          method: PATCH
+          endpoint:
+            expr: '"repos/" + _.repo_path'
+          request_body:
+            expr: '{"web_commit_signoff_required": true}'
+
+      # Enable advanced security features when the org plan allows it
+      enable-advanced-security:
+        description: "Enable advanced security, secret scanning, and push protection"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [update-github-repo-settings]
+        onError: continue
+        inputs:
+          operation: api_call
+          method: PATCH
+          endpoint:
+            expr: '"repos/" + _.repo_path'
+          request_body:
+            expr: '{"security_and_analysis": {"advanced_security": {"status": "enabled"}, "secret_scanning": {"status": "enabled"}, "secret_scanning_push_protection": {"status": "enabled"}}}'
+
+      create-label-bug:
+        description: "Create the bug label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: bug
+          color: "d73a4a"
+          label_description: Something is not working
+
+      create-label-enhancement:
+        description: "Create the enhancement label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: enhancement
+          color: "a2eeef"
+          label_description: New feature or request
+
+      create-label-documentation:
+        description: "Create the documentation label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: documentation
+          color: "0075ca"
+          label_description: Improvements or additions to documentation
+
+      create-label-security:
+        description: "Create the security label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: security
+          color: "b60205"
+          label_description: Security-related change or issue
+
+      create-label-breaking-change:
+        description: "Create the breaking-change label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: breaking-change
+          color: "5319e7"
+          label_description: Change that is not backward compatible
+
+      create-label-template:
+        description: "Create the template label"
+        provider: github
+        when:
+          expr: '_.create_repo == "true"'
+        dependsOn: [create-github-repo]
+        onError: continue
+        inputs:
+          operation: create_label
+          owner:
+            expr: '_.module.replace("github.com/", "").split("/")[0]'
+          repo:
+            expr: '_.module.replace("github.com/", "").split("/")[1]'
+          label_name: template
+          color: "cfd3d7"
+          label_description: Scaffolding or template-related work
 
       # Configure branch protection via repository rulesets
       configure-branch-ruleset:
@@ -487,13 +769,20 @@ spec:
                 git add go.sum go.mod
                 git commit -s -S -m "chore: add go.sum"
                 git push
-              {{- else }}
-              Plugin project created in {{ .name }}/
+              {{- else if eq .output_mode "ai-only" }}
+              AI support files updated in {{ .output_path }}/
 
               Next steps:
-                cd {{ .name }}
+                Review the changes under .github/
+                Commit the updated AI support files
+              {{- else }}
+              Plugin project created in {{ .output_path }}/
+
+              Next steps:
+                cd {{ .output_path }}
                 go mod tidy
               {{- end }}
+              {{- if and (ne .create_repo "true") (ne .output_mode "ai-only") }}
               {{- if eq .plugin_type "auth-handler" }}
                 Implement your auth handler logic in internal/{{ .pkg_name }}/auth_handler.go
               {{- else }}
@@ -501,7 +790,8 @@ spec:
               {{- end }}
                 Run: task test
                 Run: task build
-                Test with scafctl: scafctl run -p {{ .provider_name }}
+                Test with scafctl: scafctl run provider {{ .provider_name }} value=hello
+              {{- end }}
 
       # Warn about missing go.sum (only when creating a repo)
       go-sum-warning:
@@ -525,7 +815,6 @@ spec:
         description: Base test case (provider plugin)
         command: [run, resolver]
         args: ["-o", "json", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/test/scafctl-plugin-test", "-r", "description=Test plugin", "-r", "capabilities=from", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=provider"]
-        files: ["templates/**"]
         tags: [plugin-template]
         assertions:
           - expression: __exitCode == 0
@@ -534,10 +823,24 @@ spec:
         description: Base test case (auth-handler plugin)
         command: [run, resolver]
         args: ["-o", "json", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/test/scafctl-plugin-test", "-r", "description=Test auth handler", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=auth-handler"]
-        files: ["templates/**"]
         tags: [plugin-template]
         assertions:
           - expression: __exitCode == 0
+
+      shows-help-action:
+        description: Verify the help action prints usage guidance
+        command: [run, action]
+        args: [help]
+        tags: [plugin-template]
+        assertions:
+          - expression: __exitCode == 0
+            message: "help action should succeed"
+          - expression: __stdout.contains("Plugin Template Solution")
+            message: "help action should print the help header"
+          - expression: __stdout.contains("output_mode")
+            message: "help action should describe ai-only usage"
+          - expression: __stdout.contains("scafctl run action help -f ./scafctl/solution.yaml")
+            message: "help action should show how to invoke itself"
 
       resolves-derived-values:
         description: Verify derived resolver values
@@ -559,6 +862,34 @@ spec:
           - expression: __output.template_files.totalCount > 20
             message: "Should load at least 20 template files"
 
+      loads-static-files:
+        description: Verify static AI files are loaded
+        extends: [_base]
+        command: [run, resolver, static_files]
+        assertions:
+          - expression: __output.static_files.totalCount >= 11
+            message: "Should load the static AI support files"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/copilot-instructions.md")'
+            message: "Static files should include copilot instructions"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/agents/go-reviewer.agent.md")'
+            message: "Static files should include the Go reviewer agent"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/go-review.prompt.md")'
+            message: "Static files should include the Go review prompt"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/provider-review.prompt.md")'
+            message: "Static files should include the provider review prompt"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/instructions/scafctl-provider.instructions.md")'
+            message: "Static files should include provider instructions"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/instructions/scafctl-provider.instructions.md" && e.content.contains("provider identity comes from the provider name returned over RPC"))'
+            message: "Provider AI instructions should explain provider identity vs binary filename"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/provider-implementation.prompt.md")'
+            message: "Static files should include the provider implementation prompt"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/instructions/scafctl-auth-handler.instructions.md")'
+            message: "Static files should include auth-handler instructions"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/auth-handler-review.prompt.md")'
+            message: "Static files should include the auth-handler review prompt"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/auth-handler-implementation.prompt.md")'
+            message: "Static files should include the auth-handler implementation prompt"
+
       renders-templates:
         description: Verify templates are rendered with variables
         extends: [_base]
@@ -574,6 +905,43 @@ spec:
             message: "No paths should have PLUGIN_NAME placeholder remaining"
           - expression: '!__output.output_files.exists(e, e.path.endsWith(".tpl"))'
             message: "No paths should have .tpl extension remaining"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/go-review.prompt.md")'
+            message: "Static AI files should be included in final output"
+          - expression: '__output.output_files.exists(e, e.path == ".github/copilot-instructions.md")'
+            message: "Final output should include static copilot instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/instructions/go-conventions.instructions.md")'
+            message: "Final output should include static Go conventions instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/instructions/scafctl-provider.instructions.md")'
+            message: "Final output should include static provider instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/provider-review.prompt.md")'
+            message: "Final output should include the provider review prompt"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/provider-implementation.prompt.md")'
+            message: "Final output should include the provider implementation prompt"
+          - expression: '__output.output_files.exists(e, e.path == ".github/instructions/scafctl-auth-handler.instructions.md")'
+            message: "Final output should include auth-handler instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/auth-handler-review.prompt.md")'
+            message: "Final output should include the auth-handler review prompt"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/auth-handler-implementation.prompt.md")'
+            message: "Final output should include the auth-handler implementation prompt"
+          - expression: '!__output.output_files.exists(e, e.path == ".github/copilot-instructions.md" && e.content.contains("<%"))'
+            message: "Static AI files should not be treated as templates"
+
+      renders-ai-only-output:
+        description: Verify ai-only mode limits output to static AI files
+        command: [run, resolver, output_files]
+        args: ["-o", "json", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/test/scafctl-plugin-test", "-r", "description=Test plugin", "-r", "capabilities=from", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=provider", "-r", "output_mode=ai-only", "-r", "output_path=."]
+        tags: [plugin-template]
+        assertions:
+          - expression: __exitCode == 0
+            message: "ai-only resolver run should succeed"
+          - expression: size(__output.output_files) >= 11
+            message: "ai-only mode should still emit the static AI support files"
+          - expression: __output.output_files.all(e, e.path.startsWith(".github/"))
+            message: "ai-only mode should only emit .github AI support files"
+          - expression: '__output.output_files.exists(e, e.path == ".github/copilot-instructions.md")'
+            message: "ai-only mode should include copilot instructions"
+          - expression: '!__output.output_files.exists(e, e.path.endsWith("provider.go"))'
+            message: "ai-only mode should not emit generated Go source files"
 
       renders-auth-handler-templates:
         description: Verify auth-handler templates exclude provider files
@@ -590,6 +958,14 @@ spec:
             message: "Auth-handler should include auth_handler.go"
           - expression: '__output.output_files.exists(e, e.path.endsWith("auth_handler_test.go"))'
             message: "Auth-handler should include auth_handler_test.go"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/go-review.prompt.md")'
+            message: "Auth-handler output should also include static AI files"
+          - expression: '__output.output_files.exists(e, e.path == ".github/instructions/scafctl-provider.instructions.md")'
+            message: "Auth-handler output should also include provider instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/instructions/scafctl-auth-handler.instructions.md")'
+            message: "Auth-handler output should also include auth-handler instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/prompts/auth-handler-implementation.prompt.md")'
+            message: "Auth-handler output should also include the auth-handler implementation prompt"
 
       provider-excludes-auth-handler:
         description: Verify provider templates exclude auth-handler files
