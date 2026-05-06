@@ -73,16 +73,6 @@ jobs:
           mkdir -p dist
           gh release download "${TAG}" --repo "${{ github.repository }}" --dir dist
 
-      - name: Authenticate scafctl for GHCR
-        env:
-          GH_TOKEN: ${{ secrets.CATALOG_PUSH_TOKEN != '' && secrets.CATALOG_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
-        run: |
-          scafctl auth login github \
-            --force \
-            --flow pat \
-            --registry ghcr.io \
-            --write-registry-auth
-
       - name: Extract binaries from archives
         run: |
           BINARY="<% .name %>"
