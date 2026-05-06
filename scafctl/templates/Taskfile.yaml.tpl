@@ -37,7 +37,7 @@ tasks:
         --name <% .provider_name %>
         --kind <% .plugin_type %>
         --version 0.1.0
-        --platform windows/amd64={{.DIST}}/{{.BINARY}}
+        --platform {{OS}}/{{ARCH}}={{.DIST}}/{{.BINARY}}
 
   release:tag:
     desc: "Create and push a signed release tag (usage: task release:tag VERSION=0.1.1)"
@@ -58,28 +58,25 @@ tasks:
         --name <% .provider_name %>
         --kind <% .plugin_type %>
         --version {{.VERSION}}
-        --platform windows/amd64={{.DIST}}/{{.BINARY}}
+        --platform {{OS}}/{{ARCH}}={{.DIST}}/{{.BINARY}}
 
   test:
     desc: Run tests
     cmds:
-      - >-
-        if command -v gcc >/dev/null 2>&1; then
-          CGO_ENABLED=1 go test -race -count=1 -shuffle=on -timeout 5m ./...;
-        else
-          go test -count=1 -shuffle=on -timeout 5m ./...;
-        fi
+      - go test -count=1 -shuffle=on -timeout 5m ./...
+
+  test:race:
+    desc: Run tests with race detector (requires CGO/gcc)
+    env:
+      CGO_ENABLED: "1"
+    cmds:
+      - go test -race -count=1 -shuffle=on -timeout 5m ./...
 
   test:cover:
     desc: Run tests with coverage
     cmds:
       - mkdir -p {{.COVER}}
-      - >-
-        if command -v gcc >/dev/null 2>&1; then
-          CGO_ENABLED=1 go test -race -coverprofile={{.COVER}}/cover.out -covermode=atomic ./...;
-        else
-          go test -coverprofile={{.COVER}}/cover.out -covermode=atomic ./...;
-        fi
+      - go test -coverprofile={{.COVER}}/cover.out -covermode=atomic ./...
 
   lint:
     desc: Run linter

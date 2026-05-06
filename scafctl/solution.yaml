@@ -416,7 +416,7 @@ spec:
 
             Common commands:
               Show this help:
-                scafctl run action help -f ./scafctl/solution.yaml
+                scafctl run solution -f ./scafctl/solution.yaml --action help
 
               Scaffold a local plugin repository:
                 scafctl run solution -f ./scafctl/solution.yaml -r name=scafctl-plugin-echo -r module=github.com/myorg/scafctl-plugin-echo -r description="Echo provider"
@@ -839,7 +839,7 @@ spec:
             message: "help action should print the help header"
           - expression: __stdout.contains("output_mode")
             message: "help action should describe ai-only usage"
-          - expression: __stdout.contains("scafctl run action help -f ./scafctl/solution.yaml")
+          - expression: __stdout.contains("scafctl run solution -f ./scafctl/solution.yaml --action help")
             message: "help action should show how to invoke itself"
 
       resolves-derived-values:
