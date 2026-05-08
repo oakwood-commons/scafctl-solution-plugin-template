@@ -9,8 +9,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetAuthHandlers(t *testing.T) {
+// newTestPlugin creates a Plugin configured for testing.
+// Always use this instead of &Plugin{} to avoid nil-pointer panics
+// when ConfigureAuthHandler adds initialization logic.
+func newTestPlugin(t *testing.T) *Plugin {
+	t.Helper()
 	p := &Plugin{}
+	err := p.ConfigureAuthHandler(context.Background(), HandlerName, sdkplugin.ProviderConfig{
+		BinaryName: "scafctl",
+	})
+	require.NoError(t, err)
+	return p
+}
+
+func TestGetAuthHandlers(t *testing.T) {
+	p := newTestPlugin(t)
 	handlers, err := p.GetAuthHandlers(context.Background())
 	require.NoError(t, err)
 	require.Len(t, handlers, 1)
@@ -20,16 +33,25 @@ func TestGetAuthHandlers(t *testing.T) {
 }
 
 func TestConfigureAuthHandler(t *testing.T) {
-	p := &Plugin{}
-	err := p.ConfigureAuthHandler(context.Background(), HandlerName, sdkplugin.ProviderConfig{
-		BinaryName: "scafctl",
+	t.Run("known handler", func(t *testing.T) {
+		p := &Plugin{}
+		err := p.ConfigureAuthHandler(context.Background(), HandlerName, sdkplugin.ProviderConfig{
+			BinaryName: "mycli",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "mycli", p.cfg.BinaryName)
 	})
-	require.NoError(t, err)
-	assert.Equal(t, "scafctl", p.cfg.BinaryName)
+
+	t.Run("unknown handler", func(t *testing.T) {
+		p := &Plugin{}
+		err := p.ConfigureAuthHandler(context.Background(), "unknown", sdkplugin.ProviderConfig{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unknown handler")
+	})
 }
 
 func TestLogin(t *testing.T) {
-	p := &Plugin{}
+	p := newTestPlugin(t)
 
 	t.Run("known handler", func(t *testing.T) {
 		resp, err := p.Login(context.Background(), HandlerName, sdkplugin.LoginRequest{}, nil)
@@ -47,7 +69,7 @@ func TestLogin(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
-	p := &Plugin{}
+	p := newTestPlugin(t)
 
 	t.Run("known handler", func(t *testing.T) {
 		err := p.Logout(context.Background(), HandlerName)
@@ -61,7 +83,7 @@ func TestLogout(t *testing.T) {
 }
 
 func TestGetStatus(t *testing.T) {
-	p := &Plugin{}
+	p := newTestPlugin(t)
 
 	t.Run("known handler", func(t *testing.T) {
 		status, err := p.GetStatus(context.Background(), HandlerName)
@@ -76,7 +98,7 @@ func TestGetStatus(t *testing.T) {
 }
 
 func TestGetToken(t *testing.T) {
-	p := &Plugin{}
+	p := newTestPlugin(t)
 
 	t.Run("not authenticated", func(t *testing.T) {
 		_, err := p.GetToken(context.Background(), HandlerName, sdkplugin.TokenRequest{})
@@ -91,21 +113,42 @@ func TestGetToken(t *testing.T) {
 }
 
 func TestListCachedTokens(t *testing.T) {
-	p := &Plugin{}
+	p := newTestPlugin(t)
 	tokens, err := p.ListCachedTokens(context.Background(), HandlerName)
 	require.NoError(t, err)
 	assert.Nil(t, tokens)
 }
 
 func TestPurgeExpiredTokens(t *testing.T) {
-	p := &Plugin{}
+	p := newTestPlugin(t)
 	count, err := p.PurgeExpiredTokens(context.Background(), HandlerName)
 	require.NoError(t, err)
 	assert.Equal(t, 0, count)
 }
 
+func TestDetectAvailableFlows(t *testing.T) {
+	p := newTestPlugin(t)
+
+	t.Run("known handler", func(t *testing.T) {
+		flows, err := p.DetectAvailableFlows(context.Background(), HandlerName)
+		require.NoError(t, err)
+		assert.Nil(t, flows)
+	})
+
+	t.Run("unknown handler", func(t *testing.T) {
+		_, err := p.DetectAvailableFlows(context.Background(), "unknown")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unknown handler")
+	})
+}
+
 func BenchmarkGetToken(b *testing.B) {
 	p := &Plugin{}
+	if err := p.ConfigureAuthHandler(context.Background(), HandlerName, sdkplugin.ProviderConfig{
+		BinaryName: "scafctl",
+	}); err != nil {
+		b.Fatal(err)
+	}
 	ctx := context.Background()
 	req := sdkplugin.TokenRequest{}
 

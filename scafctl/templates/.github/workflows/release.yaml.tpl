@@ -63,7 +63,10 @@ jobs:
           rm -rf "${TMP_DIR}"
 
       - name: Login to GitHub Container Registry
-        run: echo "${{ secrets.CATALOG_PUSH_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: |
+          mkdir -p ~/.docker
+          AUTH=$(printf '%s' "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" | base64 -w 0)
+          printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "${AUTH}" > ~/.docker/config.json
 
       - name: Download release archives
         env:
@@ -103,7 +106,7 @@ jobs:
 
           scafctl build plugin \
             --force \
-            --name "<% .provider_name %>" \
+            --name "<% if eq .plugin_type "auth-handler" %><% .handler_name %><% else %><% .provider_name %><% end %>" \
             --kind "<% .plugin_type %>" \
             --version "${VERSION}" \
             --platform "linux/amd64=dist/${BINARY}-linux-amd64" \
@@ -113,11 +116,14 @@ jobs:
             --platform "windows/amd64=dist/${BINARY}-windows-amd64.exe"
 
           scafctl catalog push \
-            "<% .provider_name %>@${VERSION}" \
+            "<% if eq .plugin_type "auth-handler" %><% .handler_name %><% else %><% .provider_name %><% end %>@${VERSION}" \
             --catalog "oci://ghcr.io/<% .registry_owner %>" \
             --kind "<% .plugin_type %>" \
             --force
 
       - name: Refresh catalog index
         run: |
+          mkdir -p ~/.docker
+          AUTH=$(printf '%s' "${{ github.actor }}:${{ secrets.CATALOG_PUSH_TOKEN }}" | base64 -w 0)
+          printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "${AUTH}" > ~/.docker/config.json
           scafctl catalog index push --catalog "oci://ghcr.io/<% .registry_owner %>"

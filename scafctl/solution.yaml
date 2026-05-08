@@ -251,6 +251,24 @@ spec:
             inputs:
               expression: '__self.replace("scafctl-plugin-", "")'
 
+    handler_name:
+      description: "Auth handler name (strips auth- prefix for auth-handler plugins, same as provider_name for providers)"
+      type: string
+      resolve:
+        with:
+          - provider: static
+            inputs:
+              value:
+                rslvr: provider_name
+      transform:
+        with:
+          - provider: cel
+            inputs:
+              expression: >-
+                _.plugin_type == "auth-handler" && __self.startsWith("auth-")
+                  ? __self.substring(5)
+                  : __self
+
     pkg_name:
       description: "Go package name (hyphens removed)"
       type: string
@@ -259,7 +277,7 @@ spec:
           - provider: static
             inputs:
               value:
-                rslvr: provider_name
+                expr: '_.plugin_type == "auth-handler" ? _.handler_name : _.provider_name'
       transform:
         with:
           - provider: cel
@@ -289,19 +307,22 @@ spec:
                   "sdkprovider.CapabilityFrom")
 
     display_name:
-      description: "Human-readable provider display name"
+      description: "Human-readable display name"
       type: string
       resolve:
         with:
           - provider: static
             inputs:
               value:
-                rslvr: provider_name
+                expr: '_.plugin_type == "auth-handler" ? _.handler_name : _.provider_name'
       transform:
         with:
           - provider: cel
             inputs:
-              expression: '__self.replace("-", " ") + " Provider"'
+              expression: >-
+                _.plugin_type == "auth-handler"
+                  ? __self.replace("-", " ") + " Auth Handler"
+                  : __self.replace("-", " ") + " Provider"
 
     # ── Load Templates ───────────────────────────────────────────────────────
     template_files:
@@ -353,6 +374,7 @@ spec:
         - module
         - description
         - provider_name
+        - handler_name
         - pkg_name
         - capabilities
         - capability_consts
@@ -366,6 +388,29 @@ spec:
               operation: render-tree
               leftDelim: "<%"
               rightDelim: "%>"
+              data:
+                name:
+                  rslvr: name
+                module:
+                  rslvr: module
+                description:
+                  rslvr: description
+                provider_name:
+                  rslvr: provider_name
+                handler_name:
+                  rslvr: handler_name
+                pkg_name:
+                  rslvr: pkg_name
+                capabilities:
+                  rslvr: capabilities
+                capability_consts:
+                  rslvr: capability_consts
+                display_name:
+                  rslvr: display_name
+                plugin_type:
+                  rslvr: plugin_type
+                registry_owner:
+                  rslvr: registry_owner
               entries:
                 expr: "_.template_files.entries"
 
@@ -822,7 +867,7 @@ spec:
       _base-auth:
         description: Base test case (auth-handler plugin)
         command: [run, resolver]
-        args: ["-o", "json", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/test/scafctl-plugin-test", "-r", "description=Test auth handler", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=auth-handler"]
+        args: ["-o", "json", "-r", "name=scafctl-plugin-auth-test", "-r", "module=github.com/test/scafctl-plugin-auth-test", "-r", "description=Test auth handler", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=auth-handler"]
         tags: [plugin-template]
         assertions:
           - expression: __exitCode == 0
@@ -853,6 +898,19 @@ spec:
           - expression: __output.capability_consts == ["sdkprovider.CapabilityFrom"]
             message: "Should map 'from' to the SDK constant list"
           - expression: __output.display_name == "test Provider"
+
+      resolves-auth-handler-derived-values:
+        description: Verify auth-handler derived values strip auth- prefix
+        extends: [_base-auth]
+        assertions:
+          - expression: __output.provider_name == "auth-test"
+            message: "provider_name should strip scafctl-plugin- prefix"
+          - expression: __output.handler_name == "test"
+            message: "handler_name should strip auth- prefix for auth-handler"
+          - expression: __output.pkg_name == "test"
+            message: "pkg_name should derive from handler_name for auth-handler"
+          - expression: __output.display_name == "test Auth Handler"
+            message: "display_name should use handler_name for auth-handler"
 
       loads-templates:
         description: Verify template files are loaded
@@ -966,6 +1024,8 @@ spec:
             message: "Auth-handler output should also include auth-handler instructions"
           - expression: '__output.output_files.exists(e, e.path == ".github/prompts/auth-handler-implementation.prompt.md")'
             message: "Auth-handler output should also include the auth-handler implementation prompt"
+          - expression: '__output.output_files.exists(e, e.path.endsWith("auth_handler.go") && !e.content.contains("auth-test"))'
+            message: "Auth handler code should use handler_name, not provider_name"
 
       provider-excludes-auth-handler:
         description: Verify provider templates exclude auth-handler files
