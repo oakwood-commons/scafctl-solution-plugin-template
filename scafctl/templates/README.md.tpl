@@ -11,12 +11,20 @@ This plugin uses the following names across different surfaces:
 | Repository | `<% .name %>` |
 | Go module | `<% .module %>` |
 | Binary | `<% .name %>` |
+<% if eq .plugin_type "auth-handler" -%>
+| Handler name | `<% .handler_name %>` |
+| Catalog artifact | `<% .handler_name %>` |
+
+The **handler name** is what users reference in solutions (`authProvider: <% .handler_name %>`).
+It comes from the RPC contract (`GetAuthHandlers`), not from the binary filename.
+<%- else -%>
 | Provider name | `<% .provider_name %>` |
 | Catalog artifact | `<% .provider_name %>` |
 
 The **provider name** is what users reference in solutions (`provider: <% .provider_name %>`).
 It comes from the RPC contract (`GetProviders` / `GetProviderDescriptor`), not from
 the binary filename.
+<%- end %>
 
 ## Installation
 
@@ -32,10 +40,10 @@ gh release download --repo <% .module %>
 
 <% if eq .plugin_type "auth-handler" -%>
 Register this plugin in your scafctl configuration, then use
-the **<% .provider_name %>** auth handler:
+the **<% .handler_name %>** auth handler:
 
 ```bash
-scafctl auth login <% .provider_name %>
+scafctl auth login <% .handler_name %>
 ```
 
 Once authenticated, reference it in HTTP requests:
@@ -48,7 +56,7 @@ resolvers:
         - provider: http
           inputs:
             url: https://api.example.com/data
-            auth: <% .provider_name %>
+            authProvider: <% .handler_name %>
 ```
 <%- else -%>
 Register this plugin in your scafctl configuration, then reference
@@ -113,19 +121,19 @@ testing may not exercise the same registration path as catalog-installed plugins
 
 ### Publishing to a catalog
 
-A tagged release should publish both the provider artifact and refresh the
+A tagged release should publish both the plugin artifact and refresh the
 catalog index:
 
 ```bash
-# Publish the provider artifact
-scafctl catalog push <% .provider_name %> --version v1.0.0
+# Publish the plugin artifact
+scafctl catalog push <% if eq .plugin_type "auth-handler" %><% .handler_name %><% else %><% .provider_name %><% end %> --version v1.0.0
 
-# Refresh the catalog index so the provider is discoverable
+# Refresh the catalog index so the plugin is discoverable
 scafctl catalog index push --catalog oci://ghcr.io/<REGISTRY_OWNER>
 ```
 
 Both steps are required. Publishing the artifact alone does not make the
-provider appear in catalog listings.
+plugin appear in catalog listings.
 
 ### CI release workflow
 

@@ -10,3 +10,9 @@ linters:
     - revive
     - gosec
     - misspell
+  exclusions:
+    rules:
+      - path: _test\.go
+        text: "G101:"
+        linters:
+          - gosec
