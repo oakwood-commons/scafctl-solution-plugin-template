@@ -9,5 +9,6 @@ require (
 	github.com/stretchr/testify v1.10.0
 <%- if eq .plugin_type "auth-handler" %>
 	github.com/go-logr/logr v1.4.3
+	github.com/oakwood-commons/oauth-helpers v0.2.0
 <%- end %>
 )
