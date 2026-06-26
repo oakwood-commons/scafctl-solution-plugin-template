@@ -178,7 +178,6 @@ tasks:
         echo "Pushing plugin-template@{{.VERSION}} to {{.REGISTRY}}..."
         scafctl catalog push "plugin-template@{{.VERSION}}" \
           --catalog "{{.REGISTRY}}" \
-          --sbom \
           --force
         echo "Refreshing catalog index..."
         scafctl catalog index push --catalog "{{.REGISTRY}}"
