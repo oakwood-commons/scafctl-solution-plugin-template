@@ -61,10 +61,20 @@ func (p *Plugin) GetProviderDescriptor(_ context.Context, providerName string) (
 		),
 		OutputSchemas: map[sdkprovider.Capability]*jsonschema.Schema{
 <%- range .capability_consts %>
-<%- if eq . "sdkprovider.CapabilityAction" %>
+<%- if or (eq . "sdkprovider.CapabilityAction") (eq . "sdkprovider.CapabilityState") (eq . "sdkprovider.CapabilityKubeconfig") %>
 			<% . %>: sdkhelper.ObjectSchema(nil, map[string]*jsonschema.Schema{
 				"success": {Type: "boolean"},
 				"data":    {},
+			}),
+<%- else if eq . "sdkprovider.CapabilityValidation" %>
+			<% . %>: sdkhelper.ObjectSchema(nil, map[string]*jsonschema.Schema{
+				"valid":  {Type: "boolean"},
+				"errors": {Type: "array"},
+			}),
+<%- else if eq . "sdkprovider.CapabilityAuthentication" %>
+			<% . %>: sdkhelper.ObjectSchema(nil, map[string]*jsonschema.Schema{
+				"authenticated": {Type: "boolean"},
+				"token":         {Type: "string"},
 			}),
 <%- else %>
 			<% . %>: sdkhelper.ObjectSchema(nil, map[string]*jsonschema.Schema{

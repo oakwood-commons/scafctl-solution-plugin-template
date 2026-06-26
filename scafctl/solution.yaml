@@ -89,7 +89,7 @@ spec:
               message: "Description is required"
 
     capabilities:
-      description: "Provider capabilities (comma-separated): from, transform, action, validation. Ignored for auth-handler plugins."
+      description: "Provider capabilities (comma-separated): from, transform, action, validation, state, kubeconfig. Ignored for auth-handler plugins."
       type: any
       example: from,transform
       resolve:
@@ -112,8 +112,8 @@ spec:
             inputs:
               expression: >-
                 _.plugin_type == "auth-handler" ||
-                (size(__self) > 0 && __self.all(c, c in ["from", "transform", "action", "validation"]))
-              message: "Each capability must be one of: from, transform, action, validation"
+                (size(__self) > 0 && __self.all(c, c in ["from", "transform", "action", "validation", "state", "kubeconfig"]))
+              message: "Each capability must be one of: from, transform, action, validation, state, kubeconfig"
 
     create_repo:
       description: "Whether to create a GitHub repository and configure branch rules"
@@ -303,7 +303,9 @@ spec:
                   c == "transform" ? "sdkprovider.CapabilityTransform" :
                   c == "action" ? "sdkprovider.CapabilityAction" :
                   c == "validation" ? "sdkprovider.CapabilityValidation" :
-                  c == "authentication" ? "authentication" :
+                  c == "state" ? "sdkprovider.CapabilityState" :
+                  c == "kubeconfig" ? "sdkprovider.CapabilityKubeconfig" :
+                  c == "authentication" ? "sdkprovider.CapabilityAuthentication" :
                   "sdkprovider.CapabilityFrom")
 
     display_name:
@@ -898,6 +900,17 @@ spec:
           - expression: __output.capability_consts == ["sdkprovider.CapabilityFrom"]
             message: "Should map 'from' to the SDK constant list"
           - expression: __output.display_name == "test Provider"
+
+      maps-extended-capabilities:
+        description: Verify state and kubeconfig capabilities map to SDK constants
+        command: [run, resolver]
+        args: ["-o", "json", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/test/scafctl-plugin-test", "-r", "description=Test plugin", "-r", "capabilities=state,kubeconfig", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=provider"]
+        tags: [plugin-template]
+        assertions:
+          - expression: __exitCode == 0
+            message: "state,kubeconfig capabilities should be accepted"
+          - expression: __output.capability_consts == ["sdkprovider.CapabilityState", "sdkprovider.CapabilityKubeconfig"]
+            message: "Should map state and kubeconfig to SDK capability constants"
 
       resolves-auth-handler-derived-values:
         description: Verify auth-handler derived values strip auth- prefix

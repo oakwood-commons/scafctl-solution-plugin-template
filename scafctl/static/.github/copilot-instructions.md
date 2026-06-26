@@ -27,6 +27,7 @@ When this repository is a provider plugin, keep the provider contract coherent a
 
 - `GetProviderDescriptor` defines the public contract: name, description, capabilities, schema, and output schemas.
 - `OutputSchemas` must include an entry for every declared capability. Missing output schemas cause host registration failure (reported as `provider not found`).
+- SDK v0.11.0 enforces required output fields per capability: `action`/`state`/`kubeconfig` need `success` (boolean); `validation` needs `valid` (boolean) and `errors` (array); `authentication` needs `authenticated` (boolean) and `token` (string); `from`/`transform` have none.
 - `ExecuteProvider` implements that contract and should reject unknown provider names consistently.
 - `DescribeWhatIf` should describe the same action without side effects.
 - `ConfigureProvider` should store host configuration, not perform heavy work.
