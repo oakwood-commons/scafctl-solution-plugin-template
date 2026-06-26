@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	sdkprovider "github.com/oakwood-commons/scafctl-plugin-sdk/provider"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,6 +30,7 @@ func TestGetProviderDescriptor(t *testing.T) {
 		for _, cap := range desc.Capabilities {
 			assert.Contains(t, desc.OutputSchemas, cap, "OutputSchemas must include capability %s", cap)
 		}
+		require.NoError(t, sdkprovider.ValidateDescriptor(desc), "descriptor must pass SDK validation")
 	})
 
 	t.Run("unknown provider", func(t *testing.T) {

@@ -39,7 +39,24 @@ The descriptor is the source of truth for the provider contract.
 - Missing `OutputSchemas` causes the host to reject the provider at registration time. The user-facing error is `provider not found` because the provider never registers.
 - Use `sdkhelper.ObjectSchema` to define output shapes consistently.
 - Keep output field names stable across versions.
-- Action capability outputs must include `success` (boolean) and `data` fields. Other capabilities typically use `result`.
+
+### Required Output Fields Per Capability (SDK v0.11.0)
+
+SDK v0.11.0 `provider.ValidateDescriptor` enforces required output fields and
+their JSON Schema types for each declared capability. A descriptor that omits a
+required field (or uses the wrong type) fails validation and the provider does
+not register. The supported capabilities are `from`, `transform`, `validation`,
+`authentication`, `action`, `state`, and `kubeconfig`.
+
+| Capability | Required output fields |
+| --- | --- |
+| `from` / `transform` | none |
+| `action` / `state` / `kubeconfig` | `success` (boolean) |
+| `validation` | `valid` (boolean), `errors` (array) |
+| `authentication` | `authenticated` (boolean), `token` (string) |
+
+Providers may add extra fields (e.g., `data` alongside `success`), but the
+required fields above must be present with the correct types.
 
 ## Provider Name vs Binary Name
 

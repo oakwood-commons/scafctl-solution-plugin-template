@@ -169,6 +169,7 @@ When editing provider scaffolding, reason about the generated provider contract,
 
 - Keep `GetProviderDescriptor`, `ExecuteProvider`, and `DescribeWhatIf` behavior aligned.
 - Generated descriptors must include `OutputSchemas` for every declared capability. Missing output schemas cause silent registration failure in the host (surfaced as `provider not found`).
+- Target SDK v0.11.0. Supported capabilities: `from`, `transform`, `validation`, `authentication`, `action`, `state`, `kubeconfig`. `ValidateDescriptor` requires per-capability output fields: `action`/`state`/`kubeconfig` -> `success` (boolean); `validation` -> `valid` (boolean) + `errors` (array); `authentication` -> `authenticated` (boolean) + `token` (string); `from`/`transform` -> none.
 - Treat schema fields, output schemas, README examples, generated tests, and AI guidance as one contract surface.
 - Keep provider identity guidance consistent across the generated repo: the provider name comes from the published plugin or catalog name plus the RPC contract, not the raw binary filename.
 - Do not assume renaming a binary alone will make `provider:<name>` resolve.

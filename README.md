@@ -106,7 +106,7 @@ scafctl run solution -f scafctl/solution.yaml `
 | `module` | Yes | -- | Go module path (e.g., `github.com/myorg/scafctl-plugin-echo`) |
 | `description` | Yes | -- | Brief description of what the plugin does |
 | `plugin_type` | No | `provider` | Plugin type: `provider` or `auth-handler` |
-| `capabilities` | No | `from` | Comma-separated capabilities: `from`, `transform`, `action`, `validation` |
+| `capabilities` | No | `from` | Comma-separated capabilities: `from`, `transform`, `action`, `validation`, `state`, `kubeconfig` |
 | `create_repo` | No | `false` | Create a GitHub repository and push initial commit |
 | `repo_visibility` | No | `public` | GitHub repo visibility: `public` or `private` |
 
