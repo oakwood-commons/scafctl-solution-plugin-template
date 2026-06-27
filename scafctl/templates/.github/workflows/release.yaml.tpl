@@ -62,11 +62,14 @@ jobs:
           sudo mv "${TMP_DIR}/scafctl" /usr/local/bin/scafctl
           rm -rf "${TMP_DIR}"
 
-      - name: Login to GitHub Container Registry
+      - name: Authenticate scafctl with GitHub Container Registry
+        env:
+          GH_TOKEN: ${{ secrets.CATALOG_PUSH_TOKEN }}
         run: |
-          mkdir -p ~/.docker
-          AUTH=$(printf '%s' "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" | base64 -w 0)
-          printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "${AUTH}" > ~/.docker/config.json
+          scafctl auth login github \
+            --flow pat \
+            --registry ghcr.io \
+            --write-registry-auth
 
       - name: Download release archives
         env:
@@ -123,7 +126,4 @@ jobs:
 
       - name: Refresh catalog index
         run: |
-          mkdir -p ~/.docker
-          AUTH=$(printf '%s' "${{ github.actor }}:${{ secrets.CATALOG_PUSH_TOKEN }}" | base64 -w 0)
-          printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "${AUTH}" > ~/.docker/config.json
           scafctl catalog index push --catalog "oci://ghcr.io/<% .registry_owner %>"
