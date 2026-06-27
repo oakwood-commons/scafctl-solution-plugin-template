@@ -2,7 +2,7 @@
 version: "3"
 
 vars:
-  SCAFCTL_MIN_VERSION: "0.35.0"
+  SCAFCTL_MIN_VERSION: "0.27.0"
   SOLUTION_FILE: "scafctl/solution.yaml"
 
 tasks:
@@ -49,7 +49,28 @@ tasks:
           echo "Install: https://github.com/oakwood-commons/scafctl/releases"
           exit 1
         fi
-        echo "scafctl found: $(scafctl version --short 2>/dev/null || scafctl version)"
+        MIN="{{.SCAFCTL_MIN_VERSION}}"
+        VER="$(scafctl version --short 2>/dev/null || scafctl version 2>/dev/null | awk -F': *' '/[Vv]ersion:/{print $2; exit}')"
+        VER="${VER#v}"; VER="${VER%% *}"
+        echo "scafctl found: ${VER:-unknown} (minimum required: ${MIN})"
+        case "$VER" in
+          "")
+            echo "ERROR: could not determine the scafctl version."
+            echo "Refusing to proceed -- cannot verify the minimum required version (${MIN})."
+            exit 1
+            ;;
+          *dev*|*snapshot*|*SNAPSHOT*)
+            echo "Development build detected; skipping minimum-version enforcement."
+            ;;
+          *)
+            lowest="$(printf '%s\n%s\n' "$MIN" "$VER" | sort -t. -k1,1n -k2,2n -k3,3n | head -n1)"
+            if [ "$VER" != "$MIN" ] && [ "$lowest" = "$VER" ]; then
+              echo "ERROR: scafctl ${VER} is older than the required minimum ${MIN}."
+              echo "This solution uses bundle packaging; older versions publish artifacts missing templates/static."
+              exit 1
+            fi
+            ;;
+        esac
 
   # ──────────────────────────────────────────────────────────────────────────────
   # Linting
@@ -171,10 +192,24 @@ tasks:
       - |
         set -e
         echo "Building plugin-template@{{.VERSION}} into local catalog..."
-        scafctl build solution -f "{{.SOLUTION_FILE}}" \
+        set +e
+        BUILD_OUT="$(scafctl build solution -f "{{.SOLUTION_FILE}}" \
           --name plugin-template \
           --version "{{.VERSION}}" \
-          --force
+          --force 2>&1)"
+        BUILD_RC=$?
+        set -e
+        printf '%s\n' "$BUILD_OUT"
+        if [ "$BUILD_RC" -ne 0 ]; then
+          echo "ERROR: scafctl build solution failed (exit ${BUILD_RC})."
+          exit "$BUILD_RC"
+        fi
+        if ! printf '%s\n' "$BUILD_OUT" | grep -qiE 'Bundled [1-9][0-9]* file'; then
+          echo "ERROR: build produced no bundle (templates/static would be missing)."
+          echo "Refusing to publish -- this is the plugin-template:1.3.0 regression."
+          echo "Ensure scafctl supports solution bundling (>= {{.SCAFCTL_MIN_VERSION}})."
+          exit 1
+        fi
         echo "Pushing plugin-template@{{.VERSION}} to {{.REGISTRY}}..."
         scafctl catalog push "plugin-template@{{.VERSION}}" \
           --catalog "{{.REGISTRY}}" \
