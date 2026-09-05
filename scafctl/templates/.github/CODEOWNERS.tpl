@@ -1,2 +1,2 @@
 # Default owners for everything
-* @OWNER
+* @<% .registry_owner %>
