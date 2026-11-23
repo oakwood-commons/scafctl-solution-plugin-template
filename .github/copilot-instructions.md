@@ -3,6 +3,10 @@ applyTo: '**'
 ---
 # Solution Repository -- Plugin Template
 
+<!-- copilot-review:start -->
+For pull request code review, follow the review contract in [`REVIEW.md`](../REVIEW.md) at the repo root. It is the single source of truth; do not duplicate it here.
+<!-- copilot-review:end -->
+
 This is a scafctl solutions repository. It contains a solution that scaffolds
 complete provider and auth-handler plugin projects for the scafctl ecosystem.
 
@@ -202,7 +206,3 @@ When you identify a potential scafctl bug or non-idiomatic limitation:
 2. Try 2-3 different approaches before giving up
 3. Ask the user before implementing non-idiomatic workarounds
 4. Use the `issue-creator` agent (never create issues directly)
-
-<!-- copilot-review:start -->
-For pull request code review, follow the review contract in [`REVIEW.md`](../REVIEW.md) at the repo root. It is the single source of truth; do not duplicate it here.
-<!-- copilot-review:end -->

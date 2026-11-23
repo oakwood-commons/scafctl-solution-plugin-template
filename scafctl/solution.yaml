@@ -21,6 +21,13 @@ bundle:
   include:
     - templates/**
     - static/**
+  plugins:
+    - name: directory
+      kind: provider
+      version: latest
+    - name: github
+      kind: provider
+      version: latest
 
 spec:
   resolvers:
@@ -105,7 +112,7 @@ spec:
         with:
           - provider: cel
             inputs:
-              expression: 'type(__self) == list ? __self : [__self]'
+              expression: 'type(__self) == list ? __self : string(__self).split(",").map(s, s.trim()).filter(s, s != "")'
       validate:
         with:
           - provider: validation
