@@ -24,10 +24,10 @@ bundle:
   plugins:
     - name: directory
       kind: provider
-      version: latest
+      version: "^0.2.1"
     - name: github
       kind: provider
-      version: latest
+      version: "^0.8.0"
 
 spec:
   resolvers:
@@ -243,6 +243,44 @@ spec:
             inputs:
               expression: '__self.replace("github.com/", "").split("/")[0]'
 
+    codeowners:
+      description: >-
+        Default GitHub CODEOWNERS entry (e.g. myorg/maintainers for an org team
+        or username for a personal repository; leading @ is added automatically
+        so -r codeowners=username does not trigger -r @file parsing). Defaults
+        to @<registry_owner>/maintainers for github.com modules and empty for
+        non-GitHub modules.
+      type: string
+      example: "myorg/maintainers"
+      resolve:
+        with:
+          - provider: parameter
+            inputs:
+              key: codeowners
+          - provider: static
+            inputs:
+              value:
+                expr: >-
+                  _.module.startsWith("github.com/") && _.registry_owner.matches("^[A-Za-z0-9][A-Za-z0-9_-]*$")
+                    ? "@" + _.registry_owner + "/maintainers"
+                    : ""
+      transform:
+        with:
+          - provider: cel
+            inputs:
+              expression: >-
+                (_.create_repo != "true" && _.output_mode == "ai-only") || __self.trim() == ""
+                  ? ""
+                  : __self.trim().split(" ").filter(t, t != "").map(t, t.startsWith("@") ? t : "@" + t).join(" ")
+      validate:
+        with:
+          - provider: validation
+            inputs:
+              expression: >-
+                __self == "" ||
+                __self.matches("^@[A-Za-z0-9][A-Za-z0-9_-]*(/[A-Za-z0-9._-]+)?( @[A-Za-z0-9][A-Za-z0-9_-]*(/[A-Za-z0-9._-]+)?)*$")
+              message: "codeowners must be one or more GitHub user or org/team handles (e.g. myorg/maintainers or username)"
+
     provider_name:
       description: "Provider name derived from plugin name"
       type: string
@@ -390,6 +428,7 @@ spec:
         - display_name
         - plugin_type
         - registry_owner
+        - codeowners
       resolve:
         with:
           - provider: go-template
@@ -420,6 +459,8 @@ spec:
                   rslvr: plugin_type
                 registry_owner:
                   rslvr: registry_owner
+                codeowners:
+                  rslvr: codeowners
               entries:
                 expr: "_.template_files.entries"
 
@@ -494,6 +535,7 @@ spec:
               output_path    Local output directory when create_repo=false
               create_repo    true to create and configure the GitHub repository
               repo_visibility public or private
+              codeowners     Default GitHub CODEOWNERS handle(s), e.g. myorg/maintainers or username (defaults to @<registry_owner>/maintainers for github.com modules)
 
             Notes:
               - Local runs write to output_path, which defaults to name.
@@ -539,7 +581,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [create-github-repo]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: update_repo
           owner:
@@ -561,7 +603,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [update-github-repo-settings]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: api_call
           method: PATCH
@@ -577,7 +619,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [update-github-repo-settings]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: api_call
           method: PATCH
@@ -592,7 +634,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [create-github-repo]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: create_label
           owner:
@@ -609,7 +651,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [create-github-repo]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: create_label
           owner:
@@ -626,7 +668,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [create-github-repo]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: create_label
           owner:
@@ -643,7 +685,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [create-github-repo]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: create_label
           owner:
@@ -660,7 +702,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [create-github-repo]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: create_label
           owner:
@@ -677,7 +719,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [create-github-repo]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: create_label
           owner:
@@ -695,7 +737,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [initial-commit]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: create_ruleset
           owner:
@@ -722,7 +764,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [initial-commit]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: create_ruleset
           owner:
@@ -744,7 +786,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [create-github-repo]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: enable_vulnerability_alerts
           owner:
@@ -759,7 +801,7 @@ spec:
         when:
           expr: '_.create_repo == "true"'
         dependsOn: [enable-vulnerability-alerts]
-        onError: continue
+        continueOnError: true
         inputs:
           operation: enable_automated_security_fixes
           owner:
@@ -790,7 +832,7 @@ spec:
           expr: '_.create_repo == "true"'
         dependsOn:
           - get-head-oid
-        onError: continue
+        continueOnError: true
         inputs:
           operation: create_commit
           owner:
@@ -945,12 +987,18 @@ spec:
         extends: [_base]
         command: [run, resolver, static_files]
         assertions:
-          - expression: __output.static_files.totalCount >= 11
-            message: "Should load the static AI support files"
+          - expression: __output.static_files.totalCount >= 14
+            message: "Should load all static AI support files"
           - expression: '__output.static_files.entries.exists(e, e.path == ".github/copilot-instructions.md")'
             message: "Static files should include copilot instructions"
           - expression: '__output.static_files.entries.exists(e, e.path == ".github/agents/go-reviewer.agent.md")'
             message: "Static files should include the Go reviewer agent"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/agents/go-fixer.agent.md")'
+            message: "Static files should include the Go fixer agent"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/agents/pr-reviewer.agent.md")'
+            message: "Static files should include the PR reviewer agent"
+          - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/pr-review.prompt.md")'
+            message: "Static files should include the PR review prompt"
           - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/go-review.prompt.md")'
             message: "Static files should include the Go review prompt"
           - expression: '__output.static_files.entries.exists(e, e.path == ".github/prompts/provider-review.prompt.md")'
@@ -1003,21 +1051,69 @@ spec:
             message: "Final output should include the auth-handler implementation prompt"
           - expression: '!__output.output_files.exists(e, e.path == ".github/copilot-instructions.md" && e.content.contains("<%"))'
             message: "Static AI files should not be treated as templates"
+          - expression: '__output.output_files.exists(e, e.path == ".github/CODEOWNERS" && e.content.contains("* @test/maintainers"))'
+            message: "Default CODEOWNERS should render @<registry_owner>/maintainers team handle"
+          - expression: '__output.output_files.exists(e, e.path == ".github/dependabot.yml" && e.content.contains("applies-to: security-updates"))'
+            message: "Generated dependabot.yml should separate version-updates and security-updates"
+          - expression: '__output.output_files.exists(e, e.path == ".github/workflows/codeql.yaml" && e.content.contains("github.event.repository.visibility"))'
+            message: "Generated codeql.yaml should guard analyze job by repository visibility"
+          - expression: '__output.output_files.exists(e, e.path == "go.mod" && e.content.contains("go 1.27.4") && e.content.contains("github.com/oakwood-commons/scafctl-plugin-sdk v0.19.0"))'
+            message: "Generated go.mod should pin Go 1.27.4 and scafctl-plugin-sdk v0.19.0"
+          - expression: '__output.output_files.exists(e, e.path == ".github/workflows/release.yaml" && e.content.contains("scafctl auth login github") && e.content.contains("scafctl catalog push \"provider\""))'
+            message: "Generated release.yaml should use scafctl auth login and catalog push provider subcommand"
+          - expression: '__output.output_files.exists(e, e.path == ".github/agents/go-fixer.agent.md")'
+            message: "Final output should include the Go fixer agent"
+
+      renders-custom-codeowners:
+        description: Verify custom codeowners supports personal, EMU, and multi-owner handles
+        command: [run, resolver, output_files]
+        args: ["-o", "json", "--on-validation-error", "error", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/alice/scafctl-plugin-test", "-r", "description=Test plugin", "-r", "capabilities=from", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=provider", "-r", "codeowners=myorg/maintainers @alice_corp"]
+        tags: [plugin-template]
+        assertions:
+          - expression: __exitCode == 0
+            message: "Custom codeowners multi-handle and EMU underscore handle should pass validation"
+          - expression: '__output.output_files.exists(e, e.path == ".github/CODEOWNERS" && e.content.contains("* @myorg/maintainers @alice_corp"))'
+            message: "Custom codeowners should normalize and render specified handles"
+
+      rejects-invalid-codeowners:
+        description: Verify invalid codeowners values are rejected by validation
+        command: [run, resolver, codeowners]
+        args: ["-o", "json", "--on-validation-error", "error", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/alice/scafctl-plugin-test", "-r", "description=Test plugin", "-r", "codeowners=bad@@handle"]
+        tags: [plugin-template]
+        expectFailure: true
+        assertions:
+          - expression: __exitCode != 0
+            message: "Invalid codeowners handle should fail validation"
+          - expression: '__stderr.contains("codeowners must be one or more GitHub user or org/team handles")'
+            message: "Stderr should explain the codeowners validation failure"
+
+      renders-non-github-module:
+        description: Verify non-GitHub module paths scaffold cleanly without requiring codeowners
+        command: [run, resolver, output_files]
+        args: ["-o", "json", "--on-validation-error", "error", "-r", "name=scafctl-plugin-test", "-r", "module=example.com/team/scafctl-plugin-test", "-r", "description=Test plugin", "-r", "capabilities=from", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=provider"]
+        tags: [plugin-template]
+        assertions:
+          - expression: __exitCode == 0
+            message: "Non-GitHub module path should pass validation without explicit codeowners"
+          - expression: '__output.output_files.exists(e, e.path == ".github/CODEOWNERS" && e.content.contains("# Set default owners") && !e.content.contains("@example.com"))'
+            message: "Non-GitHub module CODEOWNERS should emit placeholder comment without an invalid host-based owner"
 
       renders-ai-only-output:
         description: Verify ai-only mode limits output to static AI files
         command: [run, resolver, output_files]
-        args: ["-o", "json", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/test/scafctl-plugin-test", "-r", "description=Test plugin", "-r", "capabilities=from", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=provider", "-r", "output_mode=ai-only", "-r", "output_path=."]
+        args: ["-o", "json", "--on-validation-error", "error", "-r", "name=scafctl-plugin-test", "-r", "module=github.com/test/scafctl-plugin-test", "-r", "description=Test plugin", "-r", "capabilities=from", "-r", "create_repo=false", "-r", "repo_visibility=public", "-r", "plugin_type=provider", "-r", "output_mode=ai-only", "-r", "output_path=."]
         tags: [plugin-template]
         assertions:
           - expression: __exitCode == 0
             message: "ai-only resolver run should succeed"
-          - expression: size(__output.output_files) >= 11
-            message: "ai-only mode should still emit the static AI support files"
+          - expression: size(__output.output_files) >= 14
+            message: "ai-only mode should emit all static AI support files"
           - expression: __output.output_files.all(e, e.path.startsWith(".github/"))
             message: "ai-only mode should only emit .github AI support files"
           - expression: '__output.output_files.exists(e, e.path == ".github/copilot-instructions.md")'
             message: "ai-only mode should include copilot instructions"
+          - expression: '__output.output_files.exists(e, e.path == ".github/agents/go-fixer.agent.md")'
+            message: "ai-only mode should include go-fixer agent"
           - expression: '!__output.output_files.exists(e, e.path.endsWith("provider.go"))'
             message: "ai-only mode should not emit generated Go source files"
 
@@ -1036,6 +1132,10 @@ spec:
             message: "Auth-handler should include auth_handler.go"
           - expression: '__output.output_files.exists(e, e.path.endsWith("auth_handler_test.go"))'
             message: "Auth-handler should include auth_handler_test.go"
+          - expression: '__output.output_files.exists(e, e.path == "Taskfile.yaml" && e.content.contains("--name test") && !e.content.contains("--name auth-test") && e.content.contains("{{.CLI}}") && e.content.contains("{{.EXE}}"))'
+            message: "Auth-handler Taskfile should use handler_name, CLI, and EXE variables"
+          - expression: '__output.output_files.exists(e, e.path == ".github/workflows/release.yaml" && e.content.contains("scafctl catalog push \"auth-handler\""))'
+            message: "Auth-handler release.yaml should push via auth-handler subcommand"
           - expression: '__output.output_files.exists(e, e.path == ".github/prompts/go-review.prompt.md")'
             message: "Auth-handler output should also include static AI files"
           - expression: '__output.output_files.exists(e, e.path == ".github/instructions/scafctl-provider.instructions.md")'

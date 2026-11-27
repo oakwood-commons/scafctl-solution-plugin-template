@@ -4,9 +4,9 @@ Thank you for your interest in contributing!
 
 ## Prerequisites
 
-- [scafctl CLI](https://github.com/oakwood-commons/scafctl/releases) (>= 0.35.0)
+- [scafctl CLI](https://github.com/oakwood-commons/scafctl/releases) (>= 0.47.0)
 - [Task](https://taskfile.dev/installation/) (go-task runner)
-- Go 1.26+ (only needed for `task validate`)
+- Go 1.27+ (only needed for `task validate`)
 
 ## Development Workflow
 

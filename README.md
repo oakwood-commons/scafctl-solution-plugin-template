@@ -1,7 +1,7 @@
 # scafctl-solution-plugin-template
 
 [![CI](https://github.com/oakwood-commons/scafctl-solution-plugin-template/actions/workflows/ci.yml/badge.svg)](https://github.com/oakwood-commons/scafctl-solution-plugin-template/actions/workflows/ci.yml)
-![scafctl >= 0.35.0](https://img.shields.io/badge/scafctl-%3E%3D%200.35.0-blue)
+![scafctl >= 0.47.0](https://img.shields.io/badge/scafctl-%3E%3D%200.47.0-blue)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Scaffolds a complete scafctl plugin project (provider or auth-handler) with source
@@ -10,8 +10,8 @@ AI instructions.
 
 ## Prerequisites
 
-- [scafctl CLI](https://github.com/oakwood-commons/scafctl/releases) >= 0.35.0
-- Go 1.26+ (only needed if running locally without `create_repo=true`)
+- [scafctl CLI](https://github.com/oakwood-commons/scafctl/releases) >= 0.47.0
+- Go 1.27+ (only needed if running locally without `create_repo=true`)
 - [gh CLI](https://cli.github.com/) (only needed if using `create_repo=true`)
 
 ## Quick Start
@@ -109,6 +109,7 @@ scafctl run solution -f scafctl/solution.yaml `
 | `capabilities` | No | `from` | Comma-separated capabilities: `from`, `transform`, `action`, `validation`, `state`, `kubeconfig` |
 | `create_repo` | No | `false` | Create a GitHub repository and push initial commit |
 | `repo_visibility` | No | `public` | GitHub repo visibility: `public` or `private` |
+| `codeowners` | No | `@<registry_owner>/maintainers` (`github.com` modules) | Default GitHub CODEOWNERS handle(s), e.g., `myorg/maintainers` or `username` (leading `@` added automatically; omitted by default for non-GitHub module hosts) |
 
 ## Generated Project Structure
 
@@ -118,9 +119,11 @@ scafctl run solution -f scafctl/solution.yaml `
 scafctl-plugin-myecho/
   .github/
     workflows/ci.yaml, release.yaml, dco.yaml, codeql.yaml
+    agents/go-reviewer.agent.md, go-fixer.agent.md, pr-reviewer.agent.md
+    prompts/go-review.prompt.md, pr-review.prompt.md, provider-*.prompt.md, auth-handler-*.prompt.md
+    instructions/go-conventions.instructions.md, go-testing.instructions.md, scafctl-provider.instructions.md, scafctl-auth-handler.instructions.md
     CODEOWNERS, SECURITY.md, dependabot.yml, copilot-instructions.md
     ISSUE_TEMPLATE/bug_report.md, feature_request.md
-    instructions/go-conventions.instructions.md, go-testing.instructions.md
     PULL_REQUEST_TEMPLATE.md
   cmd/scafctl-plugin-myecho/main.go
   internal/myecho/provider.go

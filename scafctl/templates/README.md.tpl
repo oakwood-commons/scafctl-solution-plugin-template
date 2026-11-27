@@ -126,7 +126,7 @@ catalog index:
 
 ```bash
 # Publish the plugin artifact
-scafctl catalog push <% if eq .plugin_type "auth-handler" %><% .handler_name %><% else %><% .provider_name %><% end %> --version v1.0.0
+scafctl catalog push <% .plugin_type %> <% if eq .plugin_type "auth-handler" %><% .handler_name %><% else %><% .provider_name %><% end %>@1.0.0 --catalog oci://ghcr.io/<REGISTRY_OWNER>
 
 # Refresh the catalog index so the plugin is discoverable
 scafctl catalog index push --catalog oci://ghcr.io/<REGISTRY_OWNER>

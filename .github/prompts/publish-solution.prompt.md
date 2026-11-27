@@ -31,14 +31,16 @@ The version can be overridden at build time with `--version`.
 
 ### Step 3: Build the Solution
 
+Prefer `task publish VERSION=<version>` (which enforces `SCAFCTL_MIN_VERSION`, passes `--no-cache`, verifies bundled files are present, pushes, and updates the catalog index). If running `scafctl` steps manually, pass `--no-cache` and confirm the output reports bundled files:
+
 ~~~
-scafctl build solution -f ./scafctl/solution.yaml
+scafctl build solution -f ./scafctl/solution.yaml --no-cache
 ~~~
 
 Or with an explicit version:
 
 ~~~
-scafctl build solution -f ./scafctl/solution.yaml --version 1.0.0
+scafctl build solution -f ./scafctl/solution.yaml --version 1.0.0 --no-cache
 ~~~
 
 Use `--dry-run` first to preview what will be bundled:
@@ -61,10 +63,10 @@ Confirm which catalog to push to. If the user doesn't specify, use the default r
 
 ~~~
 # Push to default remote
-scafctl catalog push <name>@<version>
+scafctl catalog push solution <name>@<version>
 
 # Push to a specific catalog
-scafctl catalog push <name>@<version> --catalog <catalog-name>
+scafctl catalog push solution <name>@<version> --catalog <catalog-name>
 ~~~
 
 ### Step 6: Verify

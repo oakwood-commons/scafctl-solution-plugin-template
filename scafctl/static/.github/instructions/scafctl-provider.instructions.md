@@ -40,9 +40,9 @@ The descriptor is the source of truth for the provider contract.
 - Use `sdkhelper.ObjectSchema` to define output shapes consistently.
 - Keep output field names stable across versions.
 
-### Required Output Fields Per Capability (SDK v0.11.0)
+### Required Output Fields Per Capability (SDK v0.19.0)
 
-SDK v0.11.0 `provider.ValidateDescriptor` enforces required output fields and
+SDK v0.19.0 `provider.ValidateDescriptor` enforces required output fields and
 their JSON Schema types for each declared capability. A descriptor that omits a
 required field (or uses the wrong type) fails validation and the provider does
 not register. The supported capabilities are `from`, `transform`, `validation`,

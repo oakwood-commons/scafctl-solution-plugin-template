@@ -15,28 +15,30 @@ You are a PR review comment handler for the **scafctl solution plugin template**
    ~~~bash
    gh pr view --json number,title,url,reviews,reviewDecision,headRefName
    ~~~
-3. Fetch review threads (pending and resolved) via GraphQL:
+3. Fetch review threads (pending and resolved) via GraphQL, paginating with `after: $cursor` until `pageInfo.hasNextPage` is `false` (and paginating `comments` if `comments.pageInfo.hasNextPage` is `true`):
    ~~~bash
    gh api graphql -f query='
-     query($owner: String!, $repo: String!, $pr: Int!) {
+     query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
        repository(owner: $owner, name: $repo) {
          pullRequest(number: $pr) {
-           reviewThreads(first: 100) {
+           reviewThreads(first: 100, after: $cursor) {
              nodes {
                id
                isResolved
                isOutdated
                path
                line
-               comments(first: 20) {
+               comments(first: 100) {
                  nodes {
                    id
                    body
                    author { login }
                    createdAt
                  }
+                 pageInfo { hasNextPage endCursor }
                }
              }
+             pageInfo { hasNextPage endCursor }
            }
          }
        }
@@ -76,7 +78,7 @@ After all fixes are applied:
 
 ### Phase 5: Respond & Resolve
 
-**Only after all fixes pass verification**, respond to review threads:
+**Only after all fixes pass verification**, respond to and resolve only the user-approved review threads (leave any unapproved or newly posted threads open and surface them for triage):
 
 **To reply to a thread:**
 ~~~bash
@@ -107,7 +109,7 @@ Response templates:
 
 ## Hard Constraints
 
-- **ALWAYS** resolve all threads after responding -- including disagreements
+- **ALWAYS** resolve approved threads after responding -- including approved disagreements
 - **NEVER** respond to comments without user approval
 - **NEVER** dismiss reviews
 - **NEVER** run `git commit` or `git push` -- only make code changes

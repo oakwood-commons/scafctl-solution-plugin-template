@@ -72,12 +72,12 @@ func TestLogout(t *testing.T) {
 	p := newTestPlugin(t)
 
 	t.Run("known handler", func(t *testing.T) {
-		err := p.Logout(context.Background(), HandlerName)
+		err := p.Logout(context.Background(), HandlerName, sdkplugin.LogoutRequest{})
 		require.NoError(t, err)
 	})
 
 	t.Run("unknown handler", func(t *testing.T) {
-		err := p.Logout(context.Background(), "unknown")
+		err := p.Logout(context.Background(), "unknown", sdkplugin.LogoutRequest{})
 		assert.Error(t, err)
 	})
 }
@@ -86,13 +86,13 @@ func TestGetStatus(t *testing.T) {
 	p := newTestPlugin(t)
 
 	t.Run("known handler", func(t *testing.T) {
-		status, err := p.GetStatus(context.Background(), HandlerName)
+		status, err := p.GetStatus(context.Background(), HandlerName, sdkplugin.StatusRequest{})
 		require.NoError(t, err)
 		assert.NotNil(t, status)
 	})
 
 	t.Run("unknown handler", func(t *testing.T) {
-		_, err := p.GetStatus(context.Background(), "unknown")
+		_, err := p.GetStatus(context.Background(), "unknown", sdkplugin.StatusRequest{})
 		assert.Error(t, err)
 	})
 }

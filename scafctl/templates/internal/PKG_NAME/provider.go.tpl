@@ -23,6 +23,8 @@ const (
 // Plugin implements the scafctl ProviderPlugin interface.
 type Plugin struct{}
 
+var _ sdkplugin.ProviderPlugin = (*Plugin)(nil)
+
 // GetProviders returns the list of providers exposed by this plugin.
 //
 //nolint:revive // ctx required by interface

@@ -45,9 +45,9 @@ Generated descriptors must include `OutputSchemas` for every declared capability
 - Generated tests must assert that `OutputSchemas` is non-nil and covers every capability.
 - When adding a new capability to the template, add the corresponding `OutputSchemas` entry in the same change.
 
-### Required Output Fields Per Capability (SDK v0.11.0)
+### Required Output Fields Per Capability (SDK v0.19.0)
 
-SDK v0.11.0 `provider.ValidateDescriptor` enforces required output fields (and
+SDK v0.19.0 `provider.ValidateDescriptor` enforces required output fields (and
 their JSON Schema types) per capability. The generated `OutputSchemas` block in
 `provider.go.tpl` must emit these exact fields or the generated provider fails
 validation at registration time. Supported capabilities are `from`, `transform`,
