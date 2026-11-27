@@ -22,7 +22,7 @@ git commit -s -S -m "feat: add new feature"
 
 ### Prerequisites
 
-- Go 1.26.0+
+- Go 1.27+
 - [Task](https://taskfile.dev/) (go-task)
 - golangci-lint
 

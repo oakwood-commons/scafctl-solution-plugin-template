@@ -14,10 +14,10 @@ jobs:
     name: Verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
@@ -28,14 +28,14 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
           args: release --clean
@@ -62,11 +62,14 @@ jobs:
           sudo mv "${TMP_DIR}/scafctl" /usr/local/bin/scafctl
           rm -rf "${TMP_DIR}"
 
-      - name: Login to GitHub Container Registry
+      - name: Authenticate scafctl with GitHub Container Registry
+        env:
+          GH_TOKEN: ${{ secrets.CATALOG_PUSH_TOKEN }}
         run: |
-          mkdir -p ~/.docker
-          AUTH=$(printf '%s' "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" | base64 -w 0)
-          printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "${AUTH}" > ~/.docker/config.json
+          scafctl auth login github \
+            --flow pat \
+            --registry ghcr.io \
+            --write-registry-auth
 
       - name: Download release archives
         env:
@@ -115,15 +118,11 @@ jobs:
             --platform "darwin/arm64=dist/${BINARY}-darwin-arm64" \
             --platform "windows/amd64=dist/${BINARY}-windows-amd64.exe"
 
-          scafctl catalog push \
+          scafctl catalog push "<% .plugin_type %>" \
             "<% if eq .plugin_type "auth-handler" %><% .handler_name %><% else %><% .provider_name %><% end %>@${VERSION}" \
             --catalog "oci://ghcr.io/<% .registry_owner %>" \
-            --kind "<% .plugin_type %>" \
             --force
 
       - name: Refresh catalog index
         run: |
-          mkdir -p ~/.docker
-          AUTH=$(printf '%s' "${{ github.actor }}:${{ secrets.CATALOG_PUSH_TOKEN }}" | base64 -w 0)
-          printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "${AUTH}" > ~/.docker/config.json
           scafctl catalog index push --catalog "oci://ghcr.io/<% .registry_owner %>"

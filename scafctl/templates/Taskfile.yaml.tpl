@@ -2,9 +2,11 @@ version: "3"
 
 vars:
   BINARY: <% .name %>
+  CLI: '{{default "scafctl" .CLI}}'
   DIST: "{{.ROOT_DIR | toSlash}}/dist"
   COVER: "{{.ROOT_DIR | toSlash}}/cover"
   VERSION: '{{default "" .VERSION}}'
+  EXE: '{{if eq OS "windows"}}.exe{{end}}'
 
 tasks:
   default:
@@ -20,12 +22,12 @@ tasks:
       - go.mod
       - go.sum
     generates:
-      - "{{.DIST}}/{{.BINARY}}"
+      - "{{.DIST}}/{{.BINARY}}{{.EXE}}"
     cmds:
       - mkdir -p {{.DIST}}
       - >-
         go build -ldflags "-s -w"
-        -o {{.DIST}}/{{.BINARY}}
+        -o {{.DIST}}/{{.BINARY}}{{.EXE}}
         ./cmd/{{.BINARY}}/
 
   publish:local:
@@ -33,11 +35,11 @@ tasks:
     deps: [build]
     cmds:
       - >-
-        scafctl build plugin --force
-        --name <% .provider_name %>
+        {{.CLI}} build plugin --force
+        --name <% if eq .plugin_type "auth-handler" %><% .handler_name %><% else %><% .provider_name %><% end %>
         --kind <% .plugin_type %>
-        --version 0.1.0
-        --platform {{OS}}/{{ARCH}}={{.DIST}}/{{.BINARY}}
+        --version {{default "0.1.0" .VERSION}}
+        --platform {{OS}}/{{ARCH}}={{.DIST}}/{{.BINARY}}{{.EXE}}
 
   release:tag:
     desc: "Create and push a signed release tag (usage: task release:tag VERSION=0.1.1)"
@@ -54,11 +56,11 @@ tasks:
     deps: [build]
     cmds:
       - >-
-        scafctl build plugin --force
-        --name <% .provider_name %>
+        {{.CLI}} build plugin --force
+        --name <% if eq .plugin_type "auth-handler" %><% .handler_name %><% else %><% .provider_name %><% end %>
         --kind <% .plugin_type %>
         --version {{.VERSION}}
-        --platform {{OS}}/{{ARCH}}={{.DIST}}/{{.BINARY}}
+        --platform {{OS}}/{{ARCH}}={{.DIST}}/{{.BINARY}}{{.EXE}}
 
   test:
     desc: Run tests

@@ -1,2 +1,6 @@
+<%- if .codeowners -%>
 # Default owners for everything
-* @OWNER
+* <% .codeowners %>
+<%- else -%>
+# Set default owners (for example: * @myorg/maintainers or * @username)
+<%- end %>

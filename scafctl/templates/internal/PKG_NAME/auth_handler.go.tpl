@@ -29,6 +29,8 @@ type Plugin struct {
 	//   config     *Config       // handler-specific configuration
 }
 
+var _ sdkplugin.AuthHandlerPlugin = (*Plugin)(nil)
+
 // GetAuthHandlers returns the list of auth handlers exposed by this plugin.
 //
 //nolint:revive // ctx required by interface
@@ -91,7 +93,9 @@ func (p *Plugin) Login(ctx context.Context, handlerName string, _ sdkplugin.Logi
 }
 
 // Logout revokes the current session.
-func (p *Plugin) Logout(ctx context.Context, handlerName string) error {
+//
+//nolint:revive // ctx and req params required by interface
+func (p *Plugin) Logout(_ context.Context, handlerName string, _ sdkplugin.LogoutRequest) error {
 	if handlerName != HandlerName {
 		return fmt.Errorf("unknown handler: %s", handlerName)
 	}
@@ -109,7 +113,7 @@ func (p *Plugin) Logout(ctx context.Context, handlerName string) error {
 // GetStatus returns the current authentication status.
 //
 //nolint:revive // all params required by interface
-func (p *Plugin) GetStatus(_ context.Context, handlerName string) (*auth.Status, error) {
+func (p *Plugin) GetStatus(_ context.Context, handlerName string, _ sdkplugin.StatusRequest) (*auth.Status, error) {
 	if handlerName != HandlerName {
 		return nil, fmt.Errorf("unknown handler: %s", handlerName)
 	}
